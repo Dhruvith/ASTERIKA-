@@ -1,0 +1,57 @@
+{
+    "indexes": [
+        {
+            "collectionGroup": "trades",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "exitDate",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "trades",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "strategy",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "exitDate",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "trades",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "symbol",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "exitDate",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "trades",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "side",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "exitDate",
+                    "order": "DESCENDING"
+                }
+            ]
+        }
+    ],
+    "fieldOverrides": []
+}
