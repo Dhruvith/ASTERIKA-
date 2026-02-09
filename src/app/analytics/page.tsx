@@ -14,7 +14,7 @@ import { TrendingUp, TrendingDown, Target, Activity, BarChart, Percent } from "l
 export default function AnalyticsPage() {
     const { trades, stats } = useTrades();
 
-    const metrics = [
+    const metrics = stats ? [
         {
             label: "Profit Factor",
             value: formatNumber(stats.profitFactor),
@@ -63,7 +63,7 @@ export default function AnalyticsPage() {
             color: "text-rose-500",
             bg: "bg-rose-500/10"
         }
-    ];
+    ] : [];
 
     return (
         <AuthGuard>
@@ -97,7 +97,7 @@ export default function AnalyticsPage() {
                                             <div className={`p-2 rounded-lg ${metric.bg}`}>
                                                 <Icon className={`w-4 h-4 ${metric.color}`} />
                                             </div>
-                                            {metric.label === "Win Rate" && (
+                                            {metric.label === "Win Rate" && stats && (
                                                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${metric.bg} ${metric.color}`}>
                                                     {stats.winningTrades}W / {stats.losingTrades}L
                                                 </span>
