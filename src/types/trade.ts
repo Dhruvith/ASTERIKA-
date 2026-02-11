@@ -7,6 +7,7 @@ export type MarketCondition = "bullish" | "bearish" | "ranging" | "volatile";
 export interface Trade {
     id: string;
     userId: string;
+    accountId: string;
     symbol: string;
     side: TradeSide;
     entryPrice: number;
@@ -33,6 +34,7 @@ export interface Trade {
 }
 
 export interface TradeInput {
+    accountId: string;
     symbol: string;
     side: TradeSide;
     entryPrice: number;

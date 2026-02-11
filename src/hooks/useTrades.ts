@@ -29,6 +29,7 @@ function convertFirestoreToTrade(docData: Record<string, unknown>, id: string): 
     return {
         id,
         userId: docData.userId as string,
+        accountId: (docData.accountId as string) || "",
         symbol: docData.symbol as string,
         side: docData.side as Trade["side"],
         entryPrice: docData.entryPrice as number,
@@ -255,6 +256,7 @@ export function useTrades() {
 
             const tradeData = {
                 userId: user.uid,
+                accountId: input.accountId || "",
                 symbol: input.symbol.toUpperCase(),
                 side: input.side,
                 entryPrice: input.entryPrice,
@@ -283,7 +285,7 @@ export function useTrades() {
             const tradesRef = collection(db, "users", user.uid, "trades");
             const docRef = await addDoc(tradesRef, tradeData);
 
-            return docRef.id;
+            return { id: docRef.id, pnl };
         },
         [user]
     );

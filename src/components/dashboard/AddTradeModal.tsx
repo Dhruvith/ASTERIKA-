@@ -21,8 +21,9 @@ import {
 } from "@/components/ui";
 import { useTradeStore } from "@/store/useTradeStore";
 import { useTrades } from "@/hooks/useTrades";
+import { useAccounts } from "@/hooks/useAccounts";
 import { TradeInput, TradeSide, TradeEmotion, MarketCondition } from "@/types/trade";
-import { TrendingUp, TrendingDown, Loader2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Loader2, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tradeSchema = z.object({
@@ -74,8 +75,10 @@ const marketConditions: { value: MarketCondition; label: string }[] = [
 export function AddTradeModal() {
     const { isAddModalOpen, closeAddModal } = useTradeStore();
     const { addTrade } = useTrades();
+    const { accounts, defaultAccountId } = useAccounts();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedSide, setSelectedSide] = useState<TradeSide>("long");
+    const [selectedAccountId, setSelectedAccountId] = useState<string>("");
 
     const {
         register,
@@ -100,6 +103,7 @@ export function AddTradeModal() {
         setIsSubmitting(true);
         try {
             const tradeInput: TradeInput = {
+                accountId: selectedAccountId || defaultAccountId || "",
                 symbol: data.symbol.toUpperCase(),
                 side: data.side,
                 entryPrice: data.entryPrice,
@@ -142,6 +146,31 @@ export function AddTradeModal() {
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                    {/* Account Selector */}
+                    {accounts.length > 0 && (
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                                <Wallet className="w-3.5 h-3.5" />
+                                Trading Account
+                            </label>
+                            <Select
+                                value={selectedAccountId || defaultAccountId || accounts[0]?.id}
+                                onValueChange={setSelectedAccountId}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select account" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {accounts.map((acc) => (
+                                        <SelectItem key={acc.id} value={acc.id}>
+                                            {acc.name} ({acc.type.toUpperCase()})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
+
                     {/* Side Selector */}
                     <div className="space-y-2">
                         <label className="block text-sm font-medium text-muted-foreground">
