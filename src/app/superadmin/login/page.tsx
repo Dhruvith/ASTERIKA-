@@ -18,7 +18,7 @@ import { useSuperAdminStore } from "@/store/useSuperAdminStore";
 
 export default function SuperAdminLoginPage() {
     const router = useRouter();
-    const { login, verify, isAuthenticated, loading, error, requires2FA, clearError } =
+    const { login, skip2FA, verify, isAuthenticated, loading, error, requires2FA, clearError } =
         useSuperAdminStore();
 
     const [username, setUsername] = useState("");
@@ -255,6 +255,17 @@ export default function SuperAdminLoginPage() {
                                             Verify & Login
                                         </>
                                     )}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const ok = skip2FA();
+                                        if (ok) router.push("/superadmin/dashboard");
+                                    }}
+                                    className="w-full py-2.5 px-4 rounded-xl bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:text-white text-sm transition-all flex items-center justify-center gap-2"
+                                >
+                                    Skip for now — setup 2FA later in Settings
                                 </button>
 
                                 <button

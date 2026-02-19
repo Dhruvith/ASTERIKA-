@@ -18,6 +18,7 @@ interface SuperAdminState {
 
     // Actions
     login: (username: string, password: string, totpCode?: string) => Promise<boolean>;
+    skip2FA: () => boolean;
     verify: () => Promise<boolean>;
     logout: () => Promise<void>;
     setError: (error: string | null) => void;
@@ -78,6 +79,23 @@ export const useSuperAdminStore = create<SuperAdminState>((set, get) => ({
             });
             return false;
         }
+    },
+
+    skip2FA: () => {
+        const token = get().token;
+        if (token) {
+            if (typeof window !== "undefined") {
+                sessionStorage.setItem("sa_token", token);
+            }
+            set({
+                isAuthenticated: true,
+                loading: false,
+                error: null,
+                requires2FA: false,
+            });
+            return true;
+        }
+        return false;
     },
 
     verify: async () => {
