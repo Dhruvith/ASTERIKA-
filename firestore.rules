@@ -25,5 +25,21 @@ service cloud.firestore {
         allow read, write: if isOwner(userId);
       }
     }
+
+    // Geofences Collection - SuperAdmin managed
+    match /geofences/{geofenceId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // SuperAdmin Audit Logs - Read/Write for authenticated
+    match /superadmin_audit_logs/{logId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // SuperAdmin Settings
+    match /superadmin_settings/{settingId} {
+      allow read, write: if isAuthenticated();
+    }
   }
 }
