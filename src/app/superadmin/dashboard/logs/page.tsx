@@ -1,11 +1,9 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import {
     ScrollText,
-    RefreshCw,
     Search,
-    Filter,
     CheckCircle2,
     XCircle,
     Shield,
@@ -16,7 +14,10 @@ import {
     ChevronRight,
     Clock,
     Globe,
+    Zap,
 } from "lucide-react";
+import { collection, onSnapshot, query, orderBy, limit } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 interface AuditLog {
     id: string;
@@ -27,6 +28,7 @@ interface AuditLog {
     ip: string;
     userAgent: string;
     success: boolean;
+    createdAt?: string;
 }
 
 const CATEGORY_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
@@ -43,25 +45,38 @@ export default function LogsPage() {
     const [categoryFilter, setCategoryFilter] = useState<string>("all");
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [page, setPage] = useState(0);
+    const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
     const perPage = 20;
 
-    const fetchLogs = useCallback(async () => {
-        setLoading(true);
-        try {
-            const token = sessionStorage.getItem("sa_token");
-            const res = await fetch("/api/superadmin/data?entity=audit_logs&limit=200", {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            const json = await res.json();
-            setLogs(json.data || []);
-        } catch (err) {
-            console.error("Failed to fetch logs:", err);
-        } finally {
-            setLoading(false);
-        }
+    // Real-time Firestore listener for audit logs
+    useEffect(() => {
+        const q = query(
+            collection(db, "superadmin_audit_logs"),
+            orderBy("createdAt", "desc"),
+            limit(300)
+        );
+        const unsubscribe = onSnapshot(
+            q,
+            (snapshot) => {
+                const data = snapshot.docs.map((doc) => {
+                    const raw = doc.data();
+                    return {
+                        id: doc.id,
+                        ...raw,
+                        timestamp: raw.createdAt || raw.timestamp?.toDate?.()?.toISOString() || "",
+                    } as AuditLog;
+                });
+                setLogs(data);
+                setLastUpdate(new Date());
+                setLoading(false);
+            },
+            (error) => {
+                console.error("Real-time logs listener error:", error);
+                setLoading(false);
+            }
+        );
+        return () => unsubscribe();
     }, []);
-
-    useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
     const filtered = logs.filter((log) => {
         const matchesSearch =
@@ -84,15 +99,21 @@ export default function LogsPage() {
                         <ScrollText className="w-6 h-6 text-rose-400" />
                         Audit Logs
                     </h1>
-                    <p className="text-sm text-slate-400 mt-1">{logs.length} total entries</p>
+                    <p className="text-sm text-slate-400 mt-1 flex items-center gap-2">
+                        {logs.length} total entries
+                        <span className="text-slate-600">•</span>
+                        <Zap className="w-3 h-3 text-emerald-400" />
+                        <span className="text-emerald-400 text-xs font-medium">Live</span>
+                        <span className="text-slate-600">•</span>
+                        <span className="text-xs">Updated {lastUpdate.toLocaleTimeString()}</span>
+                    </p>
                 </div>
-                <button
-                    onClick={fetchLogs}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all"
-                >
-                    <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-                    Refresh
-                </button>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-xs text-emerald-400 font-semibold uppercase tracking-wider">
+                        Real-time
+                    </span>
+                </div>
             </div>
 
             {/* Filters */}

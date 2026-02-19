@@ -1,20 +1,19 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import {
     BarChart3,
     Users,
     TrendingUp,
     Activity,
-    RefreshCw,
     ArrowUpRight,
     ArrowDownRight,
-    MapPin,
     Clock,
+    Zap,
 } from "lucide-react";
 import {
-    BarChart,
-    Bar,
+    AreaChart,
+    Area,
     XAxis,
     YAxis,
     CartesianGrid,
@@ -23,109 +22,149 @@ import {
     PieChart,
     Pie,
     Cell,
-    AreaChart,
-    Area,
     Legend,
 } from "recharts";
+import { collection, onSnapshot, query } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
-interface AnalyticsData {
-    totalUsers: number;
-    activeToday: number;
-    totalTrades: number;
-    avgWinRate: number;
-    trafficData: { name: string; visits: number; unique: number }[];
-    usageData: { name: string; value: number; color: string }[];
+interface UserDoc {
+    id: string;
+    stats?: {
+        totalTrades?: number;
+        winRate?: number;
+        totalPnL?: number;
+        lastUpdated?: any;
+    };
+    createdAt?: any;
 }
 
 export default function AnalyticsDashboard() {
-    const [data, setData] = useState<AnalyticsData | null>(null);
+    const [users, setUsers] = useState<UserDoc[]>([]);
     const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+    const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-    const fetchAnalytics = useCallback(async () => {
-        try {
-            const token = sessionStorage.getItem("sa_token");
-            const res = await fetch("/api/superadmin/data?entity=analytics", {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            const json = await res.json();
-            if (json.data && json.data.length > 0) {
-                setData(json.data[0]);
+    // Real-time Firestore listener for users collection
+    useEffect(() => {
+        const q = query(collection(db, "users"));
+        const unsubscribe = onSnapshot(
+            q,
+            (snapshot) => {
+                const userData = snapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                })) as UserDoc[];
+                setUsers(userData);
+                setLastUpdate(new Date());
+                setLoading(false);
+            },
+            (error) => {
+                console.error("Real-time users listener error:", error);
+                setLoading(false);
             }
-            setLastRefresh(new Date());
-        } catch (err) {
-            console.error("Failed to fetch analytics:", err);
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
+        );
+
+        return () => unsubscribe();
     }, []);
 
-    useEffect(() => {
-        fetchAnalytics();
-        // Auto-refresh every 30 seconds
-        const interval = setInterval(fetchAnalytics, 30000);
-        return () => clearInterval(interval);
-    }, [fetchAnalytics]);
+    // Compute analytics from live data
+    const totalUsers = users.length;
+    const activeToday = users.filter((u) => {
+        const last = u.stats?.lastUpdated;
+        if (!last) return false;
+        const date = last.toDate ? last.toDate() : new Date(last);
+        const today = new Date();
+        return date.toDateString() === today.toDateString();
+    }).length;
+    const totalTrades = users.reduce((acc, u) => acc + (u.stats?.totalTrades || 0), 0);
+    const avgWinRate =
+        users.length > 0
+            ? Math.round(
+                (users.reduce((acc, u) => acc + (u.stats?.winRate || 0), 0) / users.length) * 100
+            ) / 100
+            : 0;
+    const totalPnL = users.reduce((acc, u) => acc + (u.stats?.totalPnL || 0), 0);
 
-    const handleRefresh = () => {
-        setRefreshing(true);
-        fetchAnalytics();
-    };
+    // Generate chart data from real user data
+    const registrationByMonth = (() => {
+        const months: Record<string, number> = {};
+        const now = new Date();
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const key = d.toLocaleString("default", { month: "short" });
+            months[key] = 0;
+        }
+        users.forEach((u) => {
+            if (u.createdAt) {
+                const date = typeof u.createdAt === "string" ? new Date(u.createdAt) : u.createdAt.toDate?.() || new Date(u.createdAt);
+                const key = date.toLocaleString("default", { month: "short" });
+                if (months[key] !== undefined) months[key]++;
+            }
+        });
+        return Object.entries(months).map(([name, signups]) => ({ name, signups, cumulative: 0 }));
+    })();
 
-    const statCards = data
-        ? [
-            {
-                label: "Total Users",
-                value: data.totalUsers,
-                icon: Users,
-                color: "from-blue-500 to-cyan-500",
-                bgColor: "bg-blue-500/10",
-                textColor: "text-blue-400",
-                change: "+12%",
-                up: true,
-            },
-            {
-                label: "Active Today",
-                value: data.activeToday,
-                icon: Activity,
-                color: "from-emerald-500 to-green-500",
-                bgColor: "bg-emerald-500/10",
-                textColor: "text-emerald-400",
-                change: "+5%",
-                up: true,
-            },
-            {
-                label: "Total Trades",
-                value: data.totalTrades.toLocaleString(),
-                icon: TrendingUp,
-                color: "from-amber-500 to-orange-500",
-                bgColor: "bg-amber-500/10",
-                textColor: "text-amber-400",
-                change: "+28%",
-                up: true,
-            },
-            {
-                label: "Avg Win Rate",
-                value: `${data.avgWinRate}%`,
-                icon: BarChart3,
-                color: "from-purple-500 to-pink-500",
-                bgColor: "bg-purple-500/10",
-                textColor: "text-purple-400",
-                change: "-2%",
-                up: false,
-            },
-        ]
-        : [];
+    // Cumulative calculation
+    let cumulative = totalUsers - registrationByMonth.reduce((a, b) => a + b.signups, 0);
+    registrationByMonth.forEach((m) => {
+        cumulative += m.signups;
+        m.cumulative = cumulative;
+    });
 
-    // Heatmap data for geofences
-    const heatmapData = [
-        { zone: "Zone A", Mon: 12, Tue: 19, Wed: 3, Thu: 5, Fri: 2, Sat: 15, Sun: 8 },
-        { zone: "Zone B", Mon: 8, Tue: 14, Wed: 22, Thu: 11, Fri: 7, Sat: 3, Sun: 19 },
-        { zone: "Zone C", Mon: 5, Tue: 8, Wed: 15, Thu: 22, Fri: 18, Sat: 10, Sun: 4 },
-        { zone: "Zone D", Mon: 18, Tue: 3, Wed: 8, Thu: 14, Fri: 22, Sat: 7, Sun: 12 },
-        { zone: "Zone E", Mon: 3, Tue: 22, Wed: 11, Thu: 8, Fri: 15, Sat: 19, Sun: 5 },
+    // Win rate distribution
+    const winRateDistribution = (() => {
+        const buckets = [
+            { name: "0-25%", value: 0, color: "#ef4444" },
+            { name: "25-50%", value: 0, color: "#f59e0b" },
+            { name: "50-75%", value: 0, color: "#3b82f6" },
+            { name: "75-100%", value: 0, color: "#10b981" },
+        ];
+        users.forEach((u) => {
+            const wr = u.stats?.winRate || 0;
+            if (wr < 25) buckets[0].value++;
+            else if (wr < 50) buckets[1].value++;
+            else if (wr < 75) buckets[2].value++;
+            else buckets[3].value++;
+        });
+        return buckets.filter((b) => b.value > 0);
+    })();
+
+    const statCards = [
+        {
+            label: "Total Users",
+            value: totalUsers,
+            icon: Users,
+            bgColor: "bg-blue-500/10",
+            textColor: "text-blue-400",
+            change: `${activeToday} today`,
+            up: true,
+        },
+        {
+            label: "Active Today",
+            value: activeToday,
+            icon: Activity,
+            bgColor: "bg-emerald-500/10",
+            textColor: "text-emerald-400",
+            change: `${totalUsers > 0 ? Math.round((activeToday / totalUsers) * 100) : 0}%`,
+            up: activeToday > 0,
+        },
+        {
+            label: "Total Trades",
+            value: totalTrades.toLocaleString(),
+            icon: TrendingUp,
+            bgColor: "bg-amber-500/10",
+            textColor: "text-amber-400",
+            change: `${users.length > 0 ? Math.round(totalTrades / users.length) : 0} avg`,
+            up: true,
+        },
+        {
+            label: "Avg Win Rate",
+            value: `${avgWinRate}%`,
+            icon: BarChart3,
+            bgColor: "bg-purple-500/10",
+            textColor: "text-purple-400",
+            change: avgWinRate >= 50 ? "Profitable" : "Below 50%",
+            up: avgWinRate >= 50,
+        },
     ];
 
     if (loading) {
@@ -151,18 +190,19 @@ export default function AnalyticsDashboard() {
                 <div>
                     <h1 className="text-2xl font-bold text-white">Analytics Dashboard</h1>
                     <p className="text-sm text-slate-400 flex items-center gap-2 mt-1">
+                        <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-emerald-400 font-medium">Real-time</span>
+                        <span className="text-slate-600">•</span>
                         <Clock className="w-3.5 h-3.5" />
-                        Last updated: {lastRefresh.toLocaleTimeString()}
+                        Last update: {lastUpdate.toLocaleTimeString()}
                     </p>
                 </div>
-                <button
-                    onClick={handleRefresh}
-                    disabled={refreshing}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all disabled:opacity-50"
-                >
-                    <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-                    Refresh
-                </button>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-xs text-emerald-400 font-semibold uppercase tracking-wider">
+                        Live Data
+                    </span>
+                </div>
             </div>
 
             {/* Stat Cards */}
@@ -174,7 +214,6 @@ export default function AnalyticsDashboard() {
                             key={i}
                             className="relative overflow-hidden rounded-2xl border border-slate-800/50 bg-slate-900/50 backdrop-blur-sm p-5 group hover:border-slate-700/50 transition-all duration-300"
                         >
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br opacity-[0.03] group-hover:opacity-[0.06] transition-opacity rounded-full -translate-y-8 translate-x-8" style={{ backgroundImage: `linear-gradient(to bottom right, var(--tw-gradient-stops))` }} />
                             <div className="flex items-start justify-between">
                                 <div className={`w-10 h-10 rounded-xl ${card.bgColor} flex items-center justify-center`}>
                                     <Icon className={`w-5 h-5 ${card.textColor}`} />
@@ -195,59 +234,57 @@ export default function AnalyticsDashboard() {
 
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Traffic Chart */}
+                {/* User Growth Chart */}
                 <div className="rounded-2xl border border-slate-800/50 bg-slate-900/50 backdrop-blur-sm p-5">
                     <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
                         <Activity className="w-4 h-4 text-blue-400" />
-                        Weekly Traffic
+                        User Growth (6 months)
                     </h3>
                     <div className="h-64">
-                        {data?.trafficData && (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={data.trafficData}>
-                                    <defs>
-                                        <linearGradient id="visitGrad" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                                        </linearGradient>
-                                        <linearGradient id="uniqueGrad" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                                    <XAxis dataKey="name" stroke="#64748b" tick={{ fontSize: 12 }} />
-                                    <YAxis stroke="#64748b" tick={{ fontSize: 12 }} />
-                                    <Tooltip
-                                        contentStyle={{
-                                            backgroundColor: "#0f172a",
-                                            border: "1px solid #1e293b",
-                                            borderRadius: "12px",
-                                            fontSize: "12px",
-                                        }}
-                                        labelStyle={{ color: "#f8fafc" }}
-                                    />
-                                    <Area type="monotone" dataKey="visits" stroke="#3b82f6" fill="url(#visitGrad)" strokeWidth={2} />
-                                    <Area type="monotone" dataKey="unique" stroke="#10b981" fill="url(#uniqueGrad)" strokeWidth={2} />
-                                    <Legend />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        )}
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={registrationByMonth}>
+                                <defs>
+                                    <linearGradient id="signupGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="cumulGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                                <XAxis dataKey="name" stroke="#64748b" tick={{ fontSize: 12 }} />
+                                <YAxis stroke="#64748b" tick={{ fontSize: 12 }} />
+                                <Tooltip
+                                    contentStyle={{
+                                        backgroundColor: "#0f172a",
+                                        border: "1px solid #1e293b",
+                                        borderRadius: "12px",
+                                        fontSize: "12px",
+                                    }}
+                                    labelStyle={{ color: "#f8fafc" }}
+                                />
+                                <Area type="monotone" dataKey="signups" stroke="#3b82f6" fill="url(#signupGrad)" strokeWidth={2} name="New Signups" />
+                                <Area type="monotone" dataKey="cumulative" stroke="#10b981" fill="url(#cumulGrad)" strokeWidth={2} name="Total Users" />
+                                <Legend />
+                            </AreaChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Usage Pie Chart */}
+                {/* Win Rate Distribution */}
                 <div className="rounded-2xl border border-slate-800/50 bg-slate-900/50 backdrop-blur-sm p-5">
                     <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
                         <BarChart3 className="w-4 h-4 text-purple-400" />
-                        Feature Usage
+                        Win Rate Distribution
                     </h3>
                     <div className="h-64 flex items-center">
-                        {data?.usageData && (
+                        {winRateDistribution.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
-                                        data={data.usageData}
+                                        data={winRateDistribution}
                                         cx="50%"
                                         cy="50%"
                                         innerRadius={60}
@@ -255,7 +292,7 @@ export default function AnalyticsDashboard() {
                                         paddingAngle={4}
                                         dataKey="value"
                                     >
-                                        {data.usageData.map((entry, index) => (
+                                        {winRateDistribution.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={entry.color} />
                                         ))}
                                     </Pie>
@@ -266,6 +303,7 @@ export default function AnalyticsDashboard() {
                                             borderRadius: "12px",
                                             fontSize: "12px",
                                         }}
+                                        formatter={(value: any) => [`${value} users`, ""]}
                                     />
                                     <Legend
                                         formatter={(value) => (
@@ -274,54 +312,38 @@ export default function AnalyticsDashboard() {
                                     />
                                 </PieChart>
                             </ResponsiveContainer>
+                        ) : (
+                            <div className="w-full text-center text-slate-500 text-sm">
+                                No user data available yet
+                            </div>
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* Geofence Heatmap */}
-            <div className="rounded-2xl border border-slate-800/50 bg-slate-900/50 backdrop-blur-sm p-5">
-                <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-amber-400" />
-                    Geofence Activity Heatmap
-                </h3>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr>
-                                <th className="text-left text-slate-400 font-medium py-2 px-3">Zone</th>
-                                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-                                    <th key={day} className="text-center text-slate-400 font-medium py-2 px-3">
-                                        {day}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {heatmapData.map((row) => (
-                                <tr key={row.zone}>
-                                    <td className="text-white font-medium py-2 px-3">{row.zone}</td>
-                                    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => {
-                                        const val = row[day as keyof typeof row] as number;
-                                        const intensity = Math.min(val / 22, 1);
-                                        return (
-                                            <td key={day} className="py-2 px-3">
-                                                <div
-                                                    className="w-full h-8 rounded-lg flex items-center justify-center text-xs font-semibold transition-all"
-                                                    style={{
-                                                        backgroundColor: `rgba(245, 158, 11, ${intensity * 0.6})`,
-                                                        color: intensity > 0.5 ? "#ffffff" : "#94a3b8",
-                                                    }}
-                                                >
-                                                    {val}
-                                                </div>
-                                            </td>
-                                        );
-                                    })}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            {/* Summary Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="rounded-2xl border border-slate-800/50 bg-slate-900/50 p-5">
+                    <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Total P&L</p>
+                    <p className={`text-2xl font-bold ${totalPnL >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                        ${totalPnL.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">Across all users</p>
+                </div>
+                <div className="rounded-2xl border border-slate-800/50 bg-slate-900/50 p-5">
+                    <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Avg Trades/User</p>
+                    <p className="text-2xl font-bold text-white">
+                        {users.length > 0 ? Math.round(totalTrades / users.length) : 0}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">Trades per user</p>
+                </div>
+                <div className="rounded-2xl border border-slate-800/50 bg-slate-900/50 p-5">
+                    <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Data Source</p>
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <p className="text-lg font-bold text-emerald-400">Firestore Live</p>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">Real-time listeners active</p>
                 </div>
             </div>
         </div>

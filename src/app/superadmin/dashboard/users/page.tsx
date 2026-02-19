@@ -1,14 +1,12 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import {
     Users,
     Search,
-    RefreshCw,
     Trash2,
     Edit3,
     Eye,
-    Plus,
     X,
     Check,
     AlertTriangle,
@@ -16,7 +14,10 @@ import {
     Calendar,
     ChevronLeft,
     ChevronRight,
+    Zap,
 } from "lucide-react";
+import { collection, onSnapshot, query, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 interface UserRecord {
     id: string;
@@ -44,36 +45,34 @@ export default function UsersPage() {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
     const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
     const [page, setPage] = useState(0);
+    const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
     const perPage = 10;
 
-    const fetchUsers = useCallback(async () => {
-        setLoading(true);
-        try {
-            const token = sessionStorage.getItem("sa_token");
-            const res = await fetch("/api/superadmin/data?entity=users&limit=200", {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            const json = await res.json();
-            setUsers(json.data || []);
-        } catch (err) {
-            console.error("Failed to fetch users:", err);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
+    // Real-time Firestore listener
     useEffect(() => {
-        fetchUsers();
-    }, [fetchUsers]);
+        const q = query(collection(db, "users"));
+        const unsubscribe = onSnapshot(
+            q,
+            (snapshot) => {
+                const data = snapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                })) as UserRecord[];
+                setUsers(data);
+                setLastUpdate(new Date());
+                setLoading(false);
+            },
+            (error) => {
+                console.error("Real-time users listener error:", error);
+                setLoading(false);
+            }
+        );
+        return () => unsubscribe();
+    }, []);
 
     const handleDelete = async (id: string) => {
         try {
-            const token = sessionStorage.getItem("sa_token");
-            await fetch(`/api/superadmin/data?entity=users&id=${id}`, {
-                method: "DELETE",
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            setUsers(users.filter((u) => u.id !== id));
+            await deleteDoc(doc(db, "users", id));
             setShowDeleteConfirm(null);
         } catch (err) {
             console.error("Delete failed:", err);
@@ -83,20 +82,11 @@ export default function UsersPage() {
     const handleUpdate = async () => {
         if (!editingUser) return;
         try {
-            const token = sessionStorage.getItem("sa_token");
-            await fetch("/api/superadmin/data", {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    entity: "users",
-                    id: editingUser.id,
-                    data: editingUser,
-                }),
+            const { id, ...data } = editingUser;
+            await updateDoc(doc(db, "users", id), {
+                ...data,
+                updatedAt: new Date().toISOString(),
             });
-            setUsers(users.map((u) => (u.id === editingUser.id ? editingUser : u)));
             setEditingUser(null);
         } catch (err) {
             console.error("Update failed:", err);
@@ -121,17 +111,21 @@ export default function UsersPage() {
                         <Users className="w-6 h-6 text-emerald-400" />
                         User Management
                     </h1>
-                    <p className="text-sm text-slate-400 mt-1">
-                        {users.length} total users registered
+                    <p className="text-sm text-slate-400 mt-1 flex items-center gap-2">
+                        {users.length} total users
+                        <span className="text-slate-600">•</span>
+                        <Zap className="w-3 h-3 text-emerald-400" />
+                        <span className="text-emerald-400 text-xs font-medium">Live</span>
+                        <span className="text-slate-600">•</span>
+                        <span className="text-xs">Updated {lastUpdate.toLocaleTimeString()}</span>
                     </p>
                 </div>
-                <button
-                    onClick={fetchUsers}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:text-white hover:bg-slate-700/50 text-sm font-medium transition-all"
-                >
-                    <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-                    Refresh
-                </button>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-xs text-emerald-400 font-semibold uppercase tracking-wider">
+                        Real-time
+                    </span>
+                </div>
             </div>
 
             {/* Search */}

@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     BarChart3,
     Users,
-    MapPin,
     Settings,
     ScrollText,
     Shield,
@@ -23,7 +22,6 @@ import { useSuperAdminStore } from "@/store/useSuperAdminStore";
 const NAV_ITEMS = [
     { href: "/superadmin/dashboard", label: "Analytics", icon: BarChart3, color: "text-blue-400" },
     { href: "/superadmin/dashboard/users", label: "Users", icon: Users, color: "text-emerald-400" },
-    { href: "/superadmin/dashboard/geofences", label: "Geofences", icon: MapPin, color: "text-amber-400" },
     { href: "/superadmin/dashboard/settings", label: "Settings", icon: Settings, color: "text-purple-400" },
     { href: "/superadmin/dashboard/logs", label: "Audit Logs", icon: ScrollText, color: "text-rose-400" },
 ];
@@ -135,14 +133,14 @@ export default function SuperAdminLayout({
                                 href={item.href}
                                 onClick={() => setSidebarOpen(false)}
                                 className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${isActive
-                                        ? "bg-slate-800/80 text-white shadow-lg"
-                                        : "text-slate-400 hover:text-white hover:bg-slate-800/40"
+                                    ? "bg-slate-800/80 text-white shadow-lg"
+                                    : "text-slate-400 hover:text-white hover:bg-slate-800/40"
                                     }`}
                             >
                                 <div
                                     className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${isActive
-                                            ? "bg-gradient-to-br from-red-500/20 to-orange-500/20"
-                                            : "bg-slate-800/50 group-hover:bg-slate-700/50"
+                                        ? "bg-gradient-to-br from-red-500/20 to-orange-500/20"
+                                        : "bg-slate-800/50 group-hover:bg-slate-700/50"
                                         }`}
                                 >
                                     <Icon className={`w-4 h-4 ${isActive ? item.color : ""}`} />

@@ -49,13 +49,7 @@ export async function GET(request: NextRequest) {
                 data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
                 break;
             }
-            case "geofences": {
-                const geoRef = collection(db, "geofences");
-                const q = query(geoRef, limit(limitCount));
-                const snapshot = await getDocs(q);
-                data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-                break;
-            }
+
             case "audit_logs": {
                 const logsRef = collection(db, "superadmin_audit_logs");
                 const q = query(logsRef, orderBy("timestamp", "desc"), limit(limitCount));
@@ -132,7 +126,7 @@ export async function POST(request: NextRequest) {
         const entity = sanitize(body.entity || "");
         const data = body.data || {};
 
-        const collectionName = entity === "geofences" ? "geofences" : entity;
+        const collectionName = entity;
         const docRef = doc(collection(db, collectionName));
 
         await setDoc(docRef, {
