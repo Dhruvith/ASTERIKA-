@@ -26,33 +26,42 @@ import {
 } from "@/lib/utils";
 
 function convertFirestoreToTrade(docData: Record<string, unknown>, id: string): Trade {
+    const safeDate = (val: unknown): Date => {
+        if (!val) return new Date();
+        if (val instanceof Date) return val;
+        if (typeof val === 'object' && val !== null && 'toDate' in val) {
+            return (val as Timestamp).toDate();
+        }
+        return new Date(val as string | number);
+    };
+
     return {
         id,
-        userId: docData.userId as string,
+        userId: (docData.userId as string) || "",
         accountId: (docData.accountId as string) || "",
-        symbol: docData.symbol as string,
-        side: docData.side as Trade["side"],
-        entryPrice: docData.entryPrice as number,
-        exitPrice: docData.exitPrice as number,
-        quantity: docData.quantity as number,
-        entryDate: (docData.entryDate as Timestamp).toDate(),
-        exitDate: (docData.exitDate as Timestamp).toDate(),
-        pnl: docData.pnl as number,
-        pnlPercent: docData.pnlPercent as number,
-        commission: docData.commission as number,
-        strategy: docData.strategy as string,
-        tags: docData.tags as string[],
-        emotion: docData.emotion as Trade["emotion"],
-        notes: docData.notes as string,
-        setupScore: docData.setupScore as number,
-        screenshots: docData.screenshots as string[],
-        riskReward: docData.riskReward as number,
-        positionSize: docData.positionSize as number,
-        stopLoss: docData.stopLoss as number,
-        takeProfit: docData.takeProfit as number,
-        marketCondition: docData.marketCondition as Trade["marketCondition"],
-        createdAt: (docData.createdAt as Timestamp).toDate(),
-        updatedAt: (docData.updatedAt as Timestamp).toDate(),
+        symbol: (docData.symbol as string) || "",
+        side: (docData.side as Trade["side"]) || "long",
+        entryPrice: Number(docData.entryPrice) || 0,
+        exitPrice: Number(docData.exitPrice) || 0,
+        quantity: Number(docData.quantity) || 0,
+        entryDate: safeDate(docData.entryDate),
+        exitDate: safeDate(docData.exitDate),
+        pnl: Number(docData.pnl) || 0,
+        pnlPercent: Number(docData.pnlPercent) || 0,
+        commission: Number(docData.commission) || 0,
+        strategy: (docData.strategy as string) || "",
+        tags: Array.isArray(docData.tags) ? docData.tags : [],
+        emotion: (docData.emotion as Trade["emotion"]) || "neutral",
+        notes: (docData.notes as string) || "",
+        setupScore: Number(docData.setupScore) || 0,
+        screenshots: Array.isArray(docData.screenshots) ? docData.screenshots : [],
+        riskReward: Number(docData.riskReward) || 0,
+        positionSize: Number(docData.positionSize) || 0,
+        stopLoss: Number(docData.stopLoss) || 0,
+        takeProfit: Number(docData.takeProfit) || 0,
+        marketCondition: (docData.marketCondition as Trade["marketCondition"]) || "ranging",
+        createdAt: safeDate(docData.createdAt),
+        updatedAt: safeDate(docData.updatedAt),
     };
 }
 

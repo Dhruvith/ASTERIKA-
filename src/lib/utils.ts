@@ -67,6 +67,7 @@ export function calculatePnLPercent(
     exitPrice: number,
     side: "long" | "short"
 ): number {
+    if (entryPrice === 0) return 0;
     if (side === "long") {
         return ((exitPrice - entryPrice) / entryPrice) * 100;
     }

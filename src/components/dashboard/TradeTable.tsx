@@ -1,56 +1,79 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Trade } from "@/types/trade";
+import { cn, formatCurrency, formatPercent, formatDate, formatNumber } from "@/lib/utils";
 import {
     Search,
-    Plus,
+    ArrowUpDown,
+    ArrowUp,
+    ArrowDown,
+    ChevronRight,
     Pencil,
     Trash2,
-    ArrowUpDown,
+    MoreHorizontal,
     TrendingUp,
-    TrendingDown
+    TrendingDown,
+    Minus,
+    BarChart2,
 } from "lucide-react";
-import { Card, Button, Input, Badge, TableRowSkeleton } from "@/components/ui";
-import { Trade } from "@/types/trade";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
-import { useTradeStore } from "@/store/useTradeStore";
+import { Card, Badge, Button } from "@/components/ui";
 
 interface TradeTableProps {
     trades: Trade[];
-    loading?: boolean;
-    onEdit?: (trade: Trade) => void;
-    onDelete?: (tradeId: string) => void;
+    loading: boolean;
+    onEdit: (trade: Trade) => void;
+    onDelete: (id: string) => void;
 }
 
-type SortField = "exitDate" | "symbol" | "pnl" | "strategy";
+type SortField = "exitDate" | "symbol" | "pnl" | "pnlPercent" | "side" | "riskReward";
 type SortDirection = "asc" | "desc";
 
 export function TradeTable({ trades, loading, onEdit, onDelete }: TradeTableProps) {
-    const { openAddModal, searchQuery, setSearchQuery } = useTradeStore();
+    const [searchQuery, setSearchQuery] = useState("");
     const [sortField, setSortField] = useState<SortField>("exitDate");
     const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+    const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
+    const handleSort = (field: SortField) => {
+        if (sortField === field) {
+            setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+        } else {
+            setSortField(field);
+            setSortDirection("desc");
+        }
+    };
+
+    const SortIcon = ({ field }: { field: SortField }) => {
+        if (sortField !== field) return <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground/50" />;
+        return sortDirection === "asc" ? (
+            <ArrowUp className="w-3.5 h-3.5 text-primary" />
+        ) : (
+            <ArrowDown className="w-3.5 h-3.5 text-primary" />
+        );
+    };
 
     const filteredAndSortedTrades = useMemo(() => {
-        let result = [...trades];
+        let filtered = trades;
 
-        // Filter by search query
-        if (searchQuery) {
+        if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
-            result = result.filter(
-                (trade) =>
-                    trade.symbol.toLowerCase().includes(query) ||
-                    trade.strategy.toLowerCase().includes(query) ||
-                    trade.notes.toLowerCase().includes(query)
+            filtered = trades.filter(
+                (t) =>
+                    t.symbol.toLowerCase().includes(query) ||
+                    t.strategy?.toLowerCase().includes(query) ||
+                    t.side.toLowerCase().includes(query) ||
+                    t.tags?.some((tag) => tag.toLowerCase().includes(query))
             );
         }
 
-        // Sort
-        result.sort((a, b) => {
+        return [...filtered].sort((a, b) => {
             let comparison = 0;
             switch (sortField) {
                 case "exitDate":
-                    comparison = new Date(a.exitDate).getTime() - new Date(b.exitDate).getTime();
+                    comparison =
+                        new Date(a.exitDate).getTime() - new Date(b.exitDate).getTime();
                     break;
                 case "symbol":
                     comparison = a.symbol.localeCompare(b.symbol);
@@ -58,35 +81,33 @@ export function TradeTable({ trades, loading, onEdit, onDelete }: TradeTableProp
                 case "pnl":
                     comparison = a.pnl - b.pnl;
                     break;
-                case "strategy":
-                    comparison = a.strategy.localeCompare(b.strategy);
+                case "pnlPercent":
+                    comparison = (a.pnlPercent || 0) - (b.pnlPercent || 0);
+                    break;
+                case "side":
+                    comparison = a.side.localeCompare(b.side);
+                    break;
+                case "riskReward":
+                    comparison = (a.riskReward || 0) - (b.riskReward || 0);
                     break;
             }
+
             return sortDirection === "asc" ? comparison : -comparison;
         });
-
-        return result;
     }, [trades, searchQuery, sortField, sortDirection]);
-
-    const handleSort = (field: SortField) => {
-        if (sortField === field) {
-            setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-        } else {
-            setSortField(field);
-            setSortDirection("desc");
-        }
-    };
 
     if (loading) {
         return (
-            <Card className="overflow-hidden">
-                <div className="p-6 border-b border-border">
-                    <h3 className="text-lg font-semibold text-foreground">Recent Trades</h3>
-                    <p className="text-sm text-muted-foreground">Loading...</p>
+            <Card className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 className="text-lg font-semibold text-foreground">Recent Trades</h3>
+                        <p className="text-sm text-muted-foreground">Loading your trades...</p>
+                    </div>
                 </div>
-                <div>
-                    {[...Array(5)].map((_, i) => (
-                        <TableRowSkeleton key={i} />
+                <div className="space-y-3">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="h-12 bg-secondary/50 rounded-lg animate-pulse" />
                     ))}
                 </div>
             </Card>
@@ -96,130 +117,233 @@ export function TradeTable({ trades, loading, onEdit, onDelete }: TradeTableProp
     return (
         <Card className="overflow-hidden">
             {/* Header */}
-            <div className="p-6 border-b border-border flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div>
-                    <h3 className="text-lg font-semibold text-foreground">Recent Trades</h3>
-                    <p className="text-sm text-muted-foreground">
-                        {filteredAndSortedTrades.length} of {trades.length} trades
-                    </p>
-                </div>
-                <div className="flex items-center gap-3 w-full md:w-auto">
-                    <div className="relative w-full md:w-64">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <input
-                            type="text"
-                            placeholder="Search trades..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="h-10 w-full rounded-md border border-input bg-background pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                        />
+            <div className="px-6 py-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                        <BarChart2 className="w-5 h-5 text-primary" />
                     </div>
-                    <Button onClick={openAddModal} size="sm">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add
-                    </Button>
+                    <div>
+                        <h3 className="text-lg font-semibold text-foreground">Recent Trades</h3>
+                        <p className="text-sm text-muted-foreground">
+                            {trades.length} total trade{trades.length !== 1 ? "s" : ""}{" "}
+                            {searchQuery && `• ${filteredAndSortedTrades.length} matching`}
+                        </p>
+                    </div>
+                </div>
+                <div className="relative">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                        type="text"
+                        placeholder="Search trades..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9 pr-4 py-2 w-full sm:w-[260px] bg-secondary/50 border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
+                    />
                 </div>
             </div>
 
             {/* Table */}
             {filteredAndSortedTrades.length === 0 ? (
-                <div className="py-16 text-center">
-                    <div className="w-16 h-16 rounded-full bg-secondary mx-auto mb-4 flex items-center justify-center">
-                        <TrendingUp className="w-8 h-8 text-muted-foreground" />
+                <div className="flex flex-col items-center justify-center py-16 px-6">
+                    <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mb-4">
+                        <Search className="w-7 h-7 text-muted-foreground/40" />
                     </div>
-                    <p className="text-foreground font-medium mb-1">
+                    <p className="text-foreground font-semibold text-base">
                         {searchQuery ? "No trades found" : "No trades yet"}
                     </p>
-                    <p className="text-sm text-muted-foreground mb-4">
-                        {searchQuery ? "Try adjusting your search" : "Start by adding your first trade"}
+                    <p className="text-sm text-muted-foreground mt-1 text-center max-w-md">
+                        {searchQuery
+                            ? `No trades match "${searchQuery}". Try a different search term.`
+                            : "Add your first trade to start tracking your performance."}
                     </p>
-                    {!searchQuery && (
-                        <Button onClick={openAddModal}>Add Trade</Button>
-                    )}
                 </div>
             ) : (
                 <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-secondary/50">
-                            <tr className="border-b border-border">
-                                {["Symbol", "Side", "Entry", "Exit", "P&L", "Date", "Strategy", "Actions"].map((header) => (
-                                    <th key={header} className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                        {header !== "Actions" && header !== "Entry" && header !== "Exit" && header !== "Side" ? (
-                                            <button
-                                                onClick={() => {
-                                                    const field = header.toLowerCase();
-                                                    if (field === "date") handleSort("exitDate");
-                                                    else if (field === "p&l") handleSort("pnl");
-                                                    else handleSort(field as SortField);
-                                                }}
-                                                className="flex items-center gap-1 hover:text-foreground"
-                                            >
-                                                {header}
-                                                <ArrowUpDown className="w-3 h-3" />
-                                            </button>
-                                        ) : (
-                                            header
-                                        )}
-                                    </th>
-                                ))}
+                    <table className="w-full min-w-[700px]">
+                        <thead>
+                            <tr className="border-b border-border bg-secondary/30">
+                                <th className="px-4 py-3 text-left">
+                                    <button
+                                        onClick={() => handleSort("exitDate")}
+                                        className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                        Date <SortIcon field="exitDate" />
+                                    </button>
+                                </th>
+                                <th className="px-4 py-3 text-left">
+                                    <button
+                                        onClick={() => handleSort("symbol")}
+                                        className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                        Symbol <SortIcon field="symbol" />
+                                    </button>
+                                </th>
+                                <th className="px-4 py-3 text-left">
+                                    <button
+                                        onClick={() => handleSort("side")}
+                                        className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                        Side <SortIcon field="side" />
+                                    </button>
+                                </th>
+                                <th className="px-4 py-3 text-right">
+                                    <button
+                                        onClick={() => handleSort("pnl")}
+                                        className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors ml-auto"
+                                    >
+                                        P&L <SortIcon field="pnl" />
+                                    </button>
+                                </th>
+                                <th className="px-4 py-3 text-right">
+                                    <button
+                                        onClick={() => handleSort("pnlPercent")}
+                                        className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors ml-auto"
+                                    >
+                                        P&L % <SortIcon field="pnlPercent" />
+                                    </button>
+                                </th>
+                                <th className="px-4 py-3 text-right">
+                                    <button
+                                        onClick={() => handleSort("riskReward")}
+                                        className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors ml-auto"
+                                    >
+                                        R:R <SortIcon field="riskReward" />
+                                    </button>
+                                </th>
+                                <th className="px-4 py-3 text-right">
+                                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                        Actions
+                                    </span>
+                                </th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-border">
+                        <tbody>
                             <AnimatePresence>
-                                {filteredAndSortedTrades.map((trade, index) => (
+                                {filteredAndSortedTrades.map((trade, i) => (
                                     <motion.tr
                                         key={trade.id}
-                                        initial={{ opacity: 0, y: 10 }}
+                                        initial={{ opacity: 0, y: 8 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, x: -10 }}
-                                        transition={{ delay: index * 0.02 }}
-                                        className="group hover:bg-secondary/50 transition-colors"
+                                        exit={{ opacity: 0, x: -20 }}
+                                        transition={{ delay: Math.min(i * 0.02, 0.3) }}
+                                        className={cn(
+                                            "border-b border-border/50 hover:bg-secondary/30 transition-colors cursor-pointer group",
+                                            expandedRow === trade.id && "bg-secondary/20"
+                                        )}
+                                        onClick={() =>
+                                            setExpandedRow((prev) =>
+                                                prev === trade.id ? null : trade.id
+                                            )
+                                        }
                                     >
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className={cn(
-                                                    "w-10 h-10 rounded-md flex items-center justify-center font-bold text-sm border border-transparent",
-                                                    trade.pnl >= 0
-                                                        ? "bg-emerald-500/10 text-emerald-500"
-                                                        : "bg-rose-500/10 text-rose-500"
-                                                )}>
-                                                    {trade.symbol.substring(0, 2)}
-                                                </div>
-                                                <span className="font-semibold text-foreground">{trade.symbol}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <Badge variant={trade.side === "long" ? "success" : "danger"} size="sm">
-                                                {trade.side.toUpperCase()}
-                                            </Badge>
-                                        </td>
-                                        <td className="px-6 py-4 font-mono text-sm text-muted-foreground">
-                                            {formatCurrency(trade.entryPrice)}
-                                        </td>
-                                        <td className="px-6 py-4 font-mono text-sm text-muted-foreground">
-                                            {formatCurrency(trade.exitPrice)}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={cn(
-                                                "font-mono text-sm font-bold",
-                                                trade.pnl >= 0 ? "text-emerald-500" : "text-rose-500"
-                                            )}>
-                                                {trade.pnl >= 0 ? "+" : ""}{formatCurrency(trade.pnl)}
+                                        {/* Date */}
+                                        <td className="px-4 py-3.5">
+                                            <span className="text-sm text-foreground font-medium">
+                                                {formatDate(trade.exitDate)}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-muted-foreground">
-                                            {formatDate(trade.exitDate)}
+
+                                        {/* Symbol */}
+                                        <td className="px-4 py-3.5">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-bold text-foreground">
+                                                    {trade.symbol}
+                                                </span>
+                                                {trade.strategy && (
+                                                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-secondary text-muted-foreground font-medium">
+                                                        {trade.strategy}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <Badge variant="outline" size="sm">{trade.strategy}</Badge>
+
+                                        {/* Side Badge */}
+                                        <td className="px-4 py-3.5">
+                                            <span
+                                                className={cn(
+                                                    "inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider",
+                                                    trade.side === "long"
+                                                        ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                                                        : "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                                                )}
+                                            >
+                                                {trade.side === "long" ? (
+                                                    <TrendingUp className="w-3 h-3" />
+                                                ) : (
+                                                    <TrendingDown className="w-3 h-3" />
+                                                )}
+                                                {trade.side}
+                                            </span>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => onEdit?.(trade)} className="p-2 hover:bg-secondary rounded-md text-muted-foreground hover:text-foreground">
-                                                    <Pencil className="w-4 h-4" />
+
+                                        {/* P&L */}
+                                        <td className="px-4 py-3.5 text-right">
+                                            <span
+                                                className={cn(
+                                                    "text-sm font-bold font-mono",
+                                                    trade.pnl > 0
+                                                        ? "text-emerald-500"
+                                                        : trade.pnl < 0
+                                                            ? "text-rose-500"
+                                                            : "text-muted-foreground"
+                                                )}
+                                            >
+                                                {trade.pnl > 0 ? "+" : ""}
+                                                {formatCurrency(trade.pnl)}
+                                            </span>
+                                        </td>
+
+                                        {/* P&L % */}
+                                        <td className="px-4 py-3.5 text-right">
+                                            <span
+                                                className={cn(
+                                                    "text-xs font-semibold font-mono px-2 py-0.5 rounded-md",
+                                                    trade.pnlPercent > 0
+                                                        ? "text-emerald-500 bg-emerald-500/10"
+                                                        : trade.pnlPercent < 0
+                                                            ? "text-rose-500 bg-rose-500/10"
+                                                            : "text-muted-foreground bg-secondary"
+                                                )}
+                                            >
+                                                {trade.pnlPercent > 0 ? "+" : ""}
+                                                {isFinite(trade.pnlPercent)
+                                                    ? formatNumber(trade.pnlPercent, 2)
+                                                    : "0.00"}
+                                                %
+                                            </span>
+                                        </td>
+
+                                        {/* R:R */}
+                                        <td className="px-4 py-3.5 text-right">
+                                            <span className="text-sm font-mono text-muted-foreground">
+                                                {trade.riskReward > 0
+                                                    ? `${formatNumber(trade.riskReward, 1)}R`
+                                                    : "—"}
+                                            </span>
+                                        </td>
+
+                                        {/* Actions */}
+                                        <td className="px-4 py-3.5 text-right">
+                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onEdit(trade);
+                                                    }}
+                                                    className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                                                    title="Edit trade"
+                                                >
+                                                    <Pencil className="w-3.5 h-3.5" />
                                                 </button>
-                                                <button onClick={() => onDelete?.(trade.id)} className="p-2 hover:bg-destructive/10 rounded-md text-muted-foreground hover:text-destructive">
-                                                    <Trash2 className="w-4 h-4" />
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onDelete(trade.id);
+                                                    }}
+                                                    className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                                                    title="Delete trade"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
                                                 </button>
                                             </div>
                                         </td>

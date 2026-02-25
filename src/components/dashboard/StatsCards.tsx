@@ -2,219 +2,196 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import {
-    TrendingUp,
-    TrendingDown,
-    Target,
-    Activity,
-    DollarSign,
-    BarChart3,
-    Zap,
-    Award,
-    ArrowUpRight,
-    ArrowDownRight,
-    Minus
-} from "lucide-react";
-import { Card, CardSkeleton, CardContainer, CardBody, CardItem } from "@/components/ui";
-import { cn, formatCurrency, formatNumber } from "@/lib/utils";
+import { Card } from "@/components/ui";
 import { TradeStats } from "@/types/trade";
+import { formatCurrency, formatNumber, cn } from "@/lib/utils";
+import {
+    DollarSign,
+    Percent,
+    TrendingUp,
+    Activity,
+    Target,
+    BarChart,
+    Sparkles,
+    Zap,
+} from "lucide-react";
 
 interface StatsCardsProps {
     stats: TradeStats | null;
-    loading?: boolean;
-}
-
-const statCards = [
-    {
-        key: "totalPnL",
-        title: "Total P&L",
-        icon: DollarSign,
-        format: (stats: TradeStats) => formatCurrency(stats.totalPnL),
-        trend: (stats: TradeStats) => stats.totalPnL,
-        color: (stats: TradeStats) => stats.totalPnL >= 0 ? "success" : "danger",
-    },
-    {
-        key: "winRate",
-        title: "Win Rate",
-        icon: Target,
-        format: (stats: TradeStats) => `${formatNumber(stats.winRate, 1)}%`,
-        trend: (stats: TradeStats) => stats.winRate - 50,
-        color: (stats: TradeStats) => stats.winRate >= 50 ? "success" : "danger",
-    },
-    {
-        key: "profitFactor",
-        title: "Profit Factor",
-        icon: Activity,
-        format: (stats: TradeStats) => stats.profitFactor === Infinity ? "∞" : formatNumber(stats.profitFactor, 2),
-        trend: (stats: TradeStats) => stats.profitFactor - 1,
-        color: (stats: TradeStats) => stats.profitFactor >= 1 ? "success" : "danger",
-    },
-    {
-        key: "sharpeRatio",
-        title: "Sharpe Ratio",
-        icon: BarChart3,
-        format: (stats: TradeStats) => formatNumber(stats.sharpeRatio, 2),
-        trend: (stats: TradeStats) => stats.sharpeRatio,
-        color: (stats: TradeStats) => stats.sharpeRatio >= 0 ? "success" : "danger",
-    },
-    {
-        key: "avgWin",
-        title: "Avg Win",
-        icon: TrendingUp,
-        format: (stats: TradeStats) => formatCurrency(stats.avgWin),
-        trend: () => 1,
-        color: () => "success" as const,
-    },
-    {
-        key: "avgLoss",
-        title: "Avg Loss",
-        icon: TrendingDown,
-        format: (stats: TradeStats) => formatCurrency(stats.avgLoss),
-        trend: () => -1,
-        color: () => "danger" as const,
-    },
-    {
-        key: "totalTrades",
-        title: "Total Trades",
-        icon: Zap,
-        format: (stats: TradeStats) => stats.totalTrades.toString(),
-        trend: () => 0,
-        color: () => "primary" as const,
-    },
-    {
-        key: "expectancy",
-        title: "Expectancy",
-        icon: Award,
-        format: (stats: TradeStats) => formatCurrency(stats.expectancy),
-        trend: (stats: TradeStats) => stats.expectancy,
-        color: (stats: TradeStats) => stats.expectancy >= 0 ? "success" : "danger",
-    },
-];
-
-function getTrendIcon(value: number) {
-    if (value > 0) return ArrowUpRight;
-    if (value < 0) return ArrowDownRight;
-    return Minus;
+    loading: boolean;
 }
 
 export function StatsCards({ stats, loading }: StatsCardsProps) {
     if (loading) {
         return (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[...Array(8)].map((_, i) => (
-                    <CardSkeleton key={i} />
-                ))}
-            </div>
-        );
-    }
-
-    if (!stats) {
-        return (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {statCards.map((card) => (
-                    <Card key={card.key} variant="default" className="p-6">
-                        <div className="flex items-start justify-between mb-4">
-                            <span className="text-sm font-medium text-muted-foreground">
-                                {card.title}
-                            </span>
-                            <div className="p-2 rounded-md bg-secondary text-muted-foreground">
-                                <card.icon className="w-4 h-4" />
-                            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                    <Card key={i} className="p-5">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="w-10 h-10 rounded-xl bg-secondary animate-pulse" />
+                            <div className="w-12 h-4 bg-secondary rounded animate-pulse" />
                         </div>
-                        <p className="text-2xl font-bold font-mono text-foreground">
-                            --
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">No data yet</p>
+                        <div className="w-24 h-8 bg-secondary rounded animate-pulse mb-2" />
+                        <div className="w-32 h-3 bg-secondary rounded animate-pulse" />
                     </Card>
                 ))}
             </div>
         );
     }
 
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {statCards.map((card, index) => {
-                const Icon = card.icon;
-                const color = card.color(stats);
-                const trend = card.trend(stats);
-                const TrendIcon = getTrendIcon(trend);
-
-                // Only use 3D card for Total PnL to make it pop, others use standard animated cards
-                if (card.key === "totalPnL") {
+    if (!stats || stats.totalTrades === 0) {
+        return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                    { label: "Total P&L", value: "$0.00", icon: DollarSign },
+                    { label: "Win Rate", value: "0%", icon: Percent },
+                    { label: "Total Trades", value: "0", icon: BarChart },
+                    { label: "Avg R:R", value: "0.0", icon: Target },
+                ].map((item, i) => {
+                    const Icon = item.icon;
                     return (
-                        <div key={card.key} className="h-full">
-                            <CardContainer className="inter-var w-full h-full" containerClassName="py-0">
-                                <CardBody className="bg-card relative group/card dark:hover:shadow-2xl dark:hover:shadow-emerald-500/[0.1] dark:bg-card dark:border-white/[0.2] border-black/[0.1] w-full h-auto rounded-xl p-6 border transition-all duration-300">
-                                    <div className="flex items-start justify-between mb-4">
-                                        <CardItem translateZ="50" className="text-sm font-medium text-muted-foreground">
-                                            {card.title}
-                                        </CardItem>
-                                        <CardItem translateZ="60" className={cn(
-                                            "p-2 rounded-md transition-colors",
-                                            color === "success" && "bg-emerald-500/10 text-emerald-500",
-                                            color === "danger" && "bg-rose-500/10 text-rose-500",
-                                            color === "primary" && "bg-blue-500/10 text-blue-500"
-                                        )}>
-                                            <Icon className="w-4 h-4" />
-                                        </CardItem>
+                        <motion.div
+                            key={i}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.05 }}
+                        >
+                            <Card className="p-5 border-border hover:border-primary/30 transition-colors">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="p-2.5 bg-secondary rounded-xl">
+                                        <Icon className="w-4.5 h-4.5 text-muted-foreground" />
                                     </div>
-                                    <CardItem translateZ="80" className="text-3xl font-bold font-mono tracking-tight text-foreground mb-1">
-                                        {card.format(stats)}
-                                    </CardItem>
-                                    <CardItem translateZ="40" className={cn(
-                                        "flex items-center gap-1 text-xs font-medium",
-                                        trend > 0 ? "text-emerald-500" : trend < 0 ? "text-rose-500" : "text-muted-foreground"
-                                    )}>
-                                        <TrendIcon className="w-3 h-3" />
-                                        <span>
-                                            {trend > 0 ? "Positive" : trend < 0 ? "Negative" : "Neutral"}
-                                        </span>
-                                    </CardItem>
-                                </CardBody>
-                            </CardContainer>
-                        </div>
+                                </div>
+                                <h3 className="text-2xl font-bold text-muted-foreground font-mono">
+                                    {item.value}
+                                </h3>
+                                <p className="text-xs text-muted-foreground mt-1 font-medium uppercase tracking-wider">
+                                    {item.label}
+                                </p>
+                            </Card>
+                        </motion.div>
                     );
-                }
+                })}
+            </div>
+        );
+    }
 
+    const cards = [
+        {
+            label: "Total P&L",
+            value: formatCurrency(stats.totalPnL),
+            icon: DollarSign,
+            color:
+                stats.totalPnL > 0
+                    ? "text-emerald-500"
+                    : stats.totalPnL < 0
+                        ? "text-rose-500"
+                        : "text-foreground",
+            bg:
+                stats.totalPnL > 0
+                    ? "bg-emerald-500/10"
+                    : stats.totalPnL < 0
+                        ? "bg-rose-500/10"
+                        : "bg-secondary",
+            iconColor:
+                stats.totalPnL > 0
+                    ? "text-emerald-500"
+                    : stats.totalPnL < 0
+                        ? "text-rose-500"
+                        : "text-muted-foreground",
+            desc: `${stats.totalTrades} trades`,
+            featured: true,
+        },
+        {
+            label: "Win Rate",
+            value: `${formatNumber(stats.winRate)}%`,
+            icon: Percent,
+            color: stats.winRate > 50 ? "text-emerald-500" : "text-rose-500",
+            bg: stats.winRate > 50 ? "bg-emerald-500/10" : "bg-rose-500/10",
+            iconColor: stats.winRate > 50 ? "text-emerald-500" : "text-rose-500",
+            desc: `${stats.winningTrades}W / ${stats.losingTrades}L`,
+        },
+        {
+            label: "Profit Factor",
+            value: isFinite(stats.profitFactor)
+                ? formatNumber(stats.profitFactor)
+                : "∞",
+            icon: TrendingUp,
+            color:
+                stats.profitFactor > 1.5
+                    ? "text-emerald-500"
+                    : stats.profitFactor > 1
+                        ? "text-yellow-500"
+                        : "text-rose-500",
+            bg:
+                stats.profitFactor > 1.5
+                    ? "bg-emerald-500/10"
+                    : stats.profitFactor > 1
+                        ? "bg-yellow-500/10"
+                        : "bg-rose-500/10",
+            iconColor:
+                stats.profitFactor > 1.5
+                    ? "text-emerald-500"
+                    : stats.profitFactor > 1
+                        ? "text-yellow-500"
+                        : "text-rose-500",
+            desc: "Gross Profit / Gross Loss",
+        },
+        {
+            label: "Avg R:R",
+            value: formatNumber(stats.avgRiskReward),
+            icon: Target,
+            color: "text-blue-500",
+            bg: "bg-blue-500/10",
+            iconColor: "text-blue-500",
+            desc: "Risk to Reward Ratio",
+        },
+    ];
+
+    return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {cards.map((card, i) => {
+                const Icon = card.icon;
                 return (
                     <motion.div
-                        key={card.key}
+                        key={card.label}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05, duration: 0.3 }}
+                        transition={{ delay: i * 0.05 }}
                     >
                         <Card
-                            className="p-6 hover:shadow-lg transition-all border-border/60 hover:border-primary/50 group h-full"
+                            className={cn(
+                                "p-5 border-border hover:border-primary/30 transition-all group",
+                                card.featured &&
+                                "bg-gradient-to-br from-card to-secondary/20 shadow-lg shadow-black/5"
+                            )}
                         >
-                            <div className="flex items-start justify-between mb-4">
-                                <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                                    {card.title}
-                                </span>
-                                <div className={cn(
-                                    "p-2 rounded-md transition-colors",
-                                    color === "success" && "bg-emerald-500/10 text-emerald-500 group-hover:bg-emerald-500/20",
-                                    color === "danger" && "bg-rose-500/10 text-rose-500 group-hover:bg-rose-500/20",
-                                    color === "primary" && "bg-blue-500/10 text-blue-500 group-hover:bg-blue-500/20"
-                                )}>
-                                    <Icon className="w-4 h-4" />
+                            <div className="flex items-center justify-between mb-3">
+                                <div
+                                    className={cn(
+                                        "p-2.5 rounded-xl transition-transform group-hover:scale-110",
+                                        card.bg
+                                    )}
+                                >
+                                    <Icon className={cn("w-4.5 h-4.5", card.iconColor)} />
                                 </div>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-2xl font-bold font-mono tracking-tight text-foreground">
-                                    {card.format(stats)}
-                                </p>
-                                {card.key !== "totalTrades" && (
-                                    <div className={cn(
-                                        "flex items-center gap-1 text-xs font-medium",
-                                        trend > 0 ? "text-emerald-500" : trend < 0 ? "text-rose-500" : "text-muted-foreground"
-                                    )}>
-                                        <TrendIcon className="w-3 h-3" />
-                                        <span>
-                                            {trend > 0 ? "Positive" : trend < 0 ? "Negative" : "Neutral"}
-                                        </span>
-                                    </div>
+                                {card.desc && (
+                                    <span className="text-xs font-medium text-muted-foreground bg-secondary/50 px-2 py-0.5 rounded-md">
+                                        {card.desc}
+                                    </span>
                                 )}
                             </div>
+                            <h3
+                                className={cn(
+                                    "text-2xl font-bold font-mono tracking-tight",
+                                    card.color
+                                )}
+                            >
+                                {card.value}
+                            </h3>
+                            <p className="text-xs text-muted-foreground mt-1 font-medium uppercase tracking-wider">
+                                {card.label}
+                            </p>
                         </Card>
                     </motion.div>
                 );
