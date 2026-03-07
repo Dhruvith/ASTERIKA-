@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -14,14 +15,10 @@ import {
     Sun,
     Moon,
     User,
-    Wallet,
-    Target,
     BookOpen,
     History,
-    Shield,
     Menu,
     X,
-    ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -29,12 +26,9 @@ import { useUIStore } from "@/store/useUIStore";
 
 const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/accounts", label: "Accounts", icon: Wallet },
     { href: "/trades", label: "Trades", icon: TrendingUp },
-    { href: "/strategies", label: "Strategies", icon: Target },
     { href: "/journal", label: "Journal", icon: BookOpen },
     { href: "/history", label: "History", icon: History },
-    { href: "/rules", label: "Rules", icon: Shield },
     { href: "/analytics", label: "Analytics", icon: BarChart3 },
     { href: "/calendar", label: "Calendar", icon: Calendar },
     { href: "/settings", label: "Settings", icon: Settings },
@@ -48,20 +42,21 @@ export function Navbar() {
 
     return (
         <>
-            <nav className="fixed top-0 left-0 right-0 z-50 h-14 border-b border-border bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+            <nav className="fixed top-0 left-0 right-0 z-50 h-20 border-b border-border bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
                 <div className="h-full container mx-auto px-4 flex items-center justify-between">
                     {/* Logo */}
-                    <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
-                        <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-                            <TrendingUp className="w-4 h-4 text-primary-foreground" />
-                        </div>
-                        <span className="text-base font-bold tracking-tight text-foreground hidden sm:inline">
-                            Asterika
-                        </span>
+                    <Link href="/dashboard" className="flex items-center gap-3 shrink-0">
+                        <Image
+                            src="/asterika_logo.png"
+                            alt="AsterikaFX"
+                            width={160}
+                            height={42}
+                            className="h-10 w-auto"
+                        />
                     </Link>
 
                     {/* Nav Links - Desktop */}
-                    <div className="hidden lg:flex items-center gap-0.5 mx-4 overflow-x-auto scrollbar-hide">
+                    <div className="hidden lg:flex items-center gap-1 mx-6 overflow-x-auto scrollbar-hide">
                         {navItems.map((item) => {
                             const isActive = pathname === item.href;
                             const Icon = item.icon;
@@ -71,13 +66,13 @@ export function Navbar() {
                                     key={item.href}
                                     href={item.href}
                                     className={cn(
-                                        "relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap",
+                                        "relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 whitespace-nowrap",
                                         isActive
-                                            ? "text-foreground bg-secondary"
+                                            ? "text-primary bg-primary/10 border border-primary/20"
                                             : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                                     )}
                                 >
-                                    <Icon className="w-3.5 h-3.5" />
+                                    <Icon className="w-4 h-4" />
                                     {item.label}
                                 </Link>
                             );
@@ -85,22 +80,22 @@ export function Navbar() {
                     </div>
 
                     {/* Right Section */}
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-3 shrink-0">
                         {/* Theme Toggle */}
                         <button
                             onClick={toggleTheme}
-                            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
                         >
                             {theme === "dark" ? (
-                                <Sun className="w-4 h-4" />
+                                <Sun className="w-5 h-5" />
                             ) : (
-                                <Moon className="w-4 h-4" />
+                                <Moon className="w-5 h-5" />
                             )}
                         </button>
 
                         {/* User Menu */}
-                        <div className="flex items-center gap-2 pl-2 border-l border-border">
-                            <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center overflow-hidden border border-border">
+                        <div className="flex items-center gap-3 pl-3 border-l border-border">
+                            <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center overflow-hidden border border-border">
                                 {user?.photoURL ? (
                                     <img
                                         src={user.photoURL}
@@ -108,24 +103,24 @@ export function Navbar() {
                                         className="w-full h-full object-cover"
                                     />
                                 ) : (
-                                    <User className="w-3.5 h-3.5 text-muted-foreground" />
+                                    <User className="w-4 h-4 text-muted-foreground" />
                                 )}
                             </div>
                             <button
                                 onClick={logout}
-                                className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                                 title="Sign out"
                             >
-                                <LogOut className="w-3.5 h-3.5" />
+                                <LogOut className="w-4 h-4" />
                             </button>
                         </div>
 
                         {/* Mobile Menu Toggle */}
                         <button
                             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                            className="lg:hidden p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                            className="lg:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
                         >
-                            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                         </button>
                     </div>
                 </div>
@@ -147,7 +142,7 @@ export function Navbar() {
                             animate={{ x: 0 }}
                             exit={{ x: "100%" }}
                             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="fixed top-14 right-0 bottom-0 z-40 w-64 bg-background border-l border-border p-4 lg:hidden shadow-2xl"
+                            className="fixed top-20 right-0 bottom-0 z-40 w-72 bg-background border-l border-border p-6 lg:hidden shadow-2xl"
                         >
                             <div className="space-y-1">
                                 {navItems.map((item) => {
@@ -160,13 +155,13 @@ export function Navbar() {
                                             href={item.href}
                                             onClick={() => setMobileMenuOpen(false)}
                                             className={cn(
-                                                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                                                "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200",
                                                 isActive
-                                                    ? "text-foreground bg-secondary"
+                                                    ? "text-primary bg-primary/10 border border-primary/20"
                                                     : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                                             )}
                                         >
-                                            <Icon className="w-4 h-4" />
+                                            <Icon className="w-5 h-5" />
                                             {item.label}
                                         </Link>
                                     );
@@ -179,4 +174,3 @@ export function Navbar() {
         </>
     );
 }
-

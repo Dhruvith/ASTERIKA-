@@ -16,32 +16,35 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Asterika - Premium Trading Journal & Analytics",
+  title: "AsterikaFX - Trading Journal for Forex & Day Traders",
   description:
-    "The intelligent trading journal that transforms your trading data into actionable insights. Track trades, analyze performance, and improve your edge.",
+    "AsterikaFX is a powerful trading journal designed for forex and day traders to track performance, analyze strategies, and become consistently profitable.",
   keywords: [
     "trading journal",
+    "forex trading journal",
+    "day trading journal",
     "trade tracker",
     "trading analytics",
-    "stock trading",
     "forex trading",
-    "crypto trading",
     "trading performance",
+    "prop firm trading",
+    "trading psychology",
+    "AsterikaFX",
   ],
-  authors: [{ name: "Asterika" }],
+  authors: [{ name: "AsterikaFX" }],
   openGraph: {
-    title: "Asterika - Premium Trading Journal & Analytics",
+    title: "AsterikaFX - Trading Journal for Forex & Day Traders",
     description:
-      "The intelligent trading journal that transforms your trading data into actionable insights.",
+      "Track your trades, build discipline, and improve performance. A powerful trading journal for serious traders.",
     type: "website",
     locale: "en_US",
-    siteName: "Asterika",
+    siteName: "AsterikaFX",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Asterika - Premium Trading Journal",
+    title: "AsterikaFX - Trading Journal",
     description:
-      "Transform your trading data into actionable insights. Built for serious traders.",
+      "Track your trades, build discipline, and improve performance. Join the growing community of traders.",
   },
   robots: {
     index: true,
@@ -58,7 +61,7 @@ export default function RootLayout({
     <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="theme-color" content="#020617" />
+        <meta name="theme-color" content="#0b1120" />
       </head>
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}
