@@ -21,6 +21,13 @@ async function verifySuperAdmin(request: NextRequest): Promise<boolean> {
     }
 }
 
+// Whitelist of allowed collection names to prevent arbitrary collection access
+const ALLOWED_ENTITIES = new Set(["users", "audit_logs", "analytics", "superadmin_audit_logs", "superadmin_settings"]);
+
+function isAllowedEntity(entity: string): boolean {
+    return ALLOWED_ENTITIES.has(entity);
+}
+
 function sanitize(input: string): string {
     return input.replace(/[<>]/g, "").replace(/javascript:/gi, "").replace(/on\w+=/gi, "").trim();
 }
@@ -126,6 +133,10 @@ export async function POST(request: NextRequest) {
         const entity = sanitize(body.entity || "");
         const data = body.data || {};
 
+        if (!isAllowedEntity(entity)) {
+            return NextResponse.json({ error: "Invalid entity" }, { status: 400 });
+        }
+
         const collectionName = entity;
         const docRef = doc(collection(db, collectionName));
 
@@ -167,6 +178,10 @@ export async function PUT(request: NextRequest) {
         const id = sanitize(body.id || "");
         const data = body.data || {};
 
+        if (!isAllowedEntity(entity)) {
+            return NextResponse.json({ error: "Invalid entity" }, { status: 400 });
+        }
+
         const docRef = doc(db, entity, id);
         await updateDoc(docRef, {
             ...data,
@@ -205,6 +220,10 @@ export async function DELETE(request: NextRequest) {
 
         if (!entity || !id) {
             return NextResponse.json({ error: "Entity and ID required" }, { status: 400 });
+        }
+
+        if (!isAllowedEntity(entity)) {
+            return NextResponse.json({ error: "Invalid entity" }, { status: 400 });
         }
 
         await deleteDoc(doc(db, entity, id));

@@ -567,6 +567,14 @@ export default function LandingPage() {
               className="h-9 w-auto"
             />
           </div>
+          <div className="flex items-center gap-6 text-sm text-muted-foreground">
+            <Link href="/terms" className="hover:text-primary transition-colors duration-300">
+              Terms &amp; Conditions
+            </Link>
+            <Link href="/privacy" className="hover:text-primary transition-colors duration-300">
+              Privacy Policy
+            </Link>
+          </div>
           <p className="text-sm text-muted-foreground">© 2026 AsterikaFX. All rights reserved.</p>
         </div>
       </footer>

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout, AuthGuard } from "@/components/layout";
 import { useAccounts } from "@/hooks/useAccounts";
+import { useTrades } from "@/hooks/useTrades";
 import { useAccountStore } from "@/store/useAccountStore";
 import {
     Plus,
@@ -18,6 +19,7 @@ import {
     Lightbulb,
     AlertTriangle,
     Sparkles,
+    Link2,
 } from "lucide-react";
 import {
     Button,
@@ -36,7 +38,7 @@ import {
     SelectValue,
     Badge,
 } from "@/components/ui";
-import { cn, formatDate, formatDateTime } from "@/lib/utils";
+import { cn, formatDate, formatDateTime, formatCurrency } from "@/lib/utils";
 
 const moodConfig = {
     great: { label: "Great", emoji: "🔥", color: "text-emerald-400", bg: "bg-emerald-500/10" },
@@ -50,6 +52,7 @@ type MoodType = keyof typeof moodConfig;
 
 export default function JournalPage() {
     const { journalEntries, accounts, createJournalEntry } = useAccounts();
+    const { trades } = useTrades();
     const {
         isAddJournalModalOpen,
         openAddJournalModal,
@@ -273,6 +276,57 @@ export default function JournalPage() {
                                 value={form.title}
                                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                             />
+
+                            {/* Link to Recent Trade */}
+                            {trades.length > 0 && (
+                                <div className="space-y-3 p-4 bg-primary/5 rounded-xl border border-primary/10">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-sm font-bold text-primary flex items-center gap-2">
+                                            <Link2 className="w-4 h-4" />
+                                            Log a Recent Trade
+                                        </label>
+                                        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest bg-primary/10 text-primary border-primary/20">Recommended</Badge>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">Select a recent trade to automatically populate the journal entry title and account.</p>
+                                    <Select
+                                        onValueChange={(tradeId: string) => {
+                                            const trade = trades.find((t) => t.id === tradeId);
+                                            if (trade) {
+                                                const pnlStr = trade.pnl >= 0 ? `+${formatCurrency(trade.pnl)}` : formatCurrency(trade.pnl);
+                                                setForm({
+                                                    ...form,
+                                                    title: `${trade.side.toUpperCase()} ${trade.symbol} — ${pnlStr} (${formatDate(trade.exitDate)})`,
+                                                    accountId: trade.accountId,
+                                                });
+                                            }
+                                        }}
+                                    >
+                                        <SelectTrigger className="bg-background">
+                                            <SelectValue placeholder="Choose a trade to review..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {trades.slice(0, 20).map((trade) => (
+                                                <SelectItem key={trade.id} value={trade.id}>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold">{trade.symbol}</span>
+                                                        <span className={cn(
+                                                            "text-[10px] px-1.5 py-0.5 rounded uppercase font-bold",
+                                                            trade.side === "long" ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+                                                        )}>{trade.side}</span>
+                                                        <span className={cn(
+                                                            "font-mono font-bold",
+                                                            trade.pnl >= 0 ? "text-emerald-400" : "text-rose-400"
+                                                        )}>
+                                                            {trade.pnl >= 0 ? "+" : ""}{formatCurrency(trade.pnl)}
+                                                        </span>
+                                                        <span className="text-muted-foreground text-[10px]">{formatDate(trade.exitDate)}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
 
                             {accounts.length > 0 && (
                                 <div className="space-y-2">

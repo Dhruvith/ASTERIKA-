@@ -1,35 +1,38 @@
 // SuperAdmin Configuration - Security Core
 // WARNING: Do not expose this file to the client
+// All secrets MUST come from environment variables
 
 import bcryptjs from "bcryptjs";
 import CryptoJS from "crypto-js";
 import jwt from "jsonwebtoken";
 
 // ============================================
-// CREDENTIALS (server-side only)
-// Username: superadmin
-// Password: A$t3r!k@Sup3r#9X  (16-char, symbols included)
+// ALL CREDENTIALS LOADED FROM ENV VARS
 // ============================================
 
 const SUPERADMIN_USERNAME = "superadmin";
-// Pre-hashed password - bcrypt hash of "A$t3r!k@Sup3r#9X"
-const SUPERADMIN_PASSWORD_HASH =
-    "$2a$12$LJ3m4dV8z5Q7vK8rN1qXaeW6T9hJ2cR4fE5gH7iK0lM3nO5pQ7rS9";
 
-// JWT Configuration
-const JWT_SECRET =
-    process.env.SUPERADMIN_JWT_SECRET ||
-    "ast3r1ka-sup3r-s3cr3t-jwt-k3y-2024-n3v3r-gu3ss";
+// Pre-hashed password stored in environment variable
+const SUPERADMIN_PASSWORD_HASH = process.env.SUPERADMIN_PASSWORD_HASH || "";
+
+// JWT Configuration — MUST be set in env
+const JWT_SECRET = process.env.SUPERADMIN_JWT_SECRET;
+if (!JWT_SECRET) {
+    throw new Error("SUPERADMIN_JWT_SECRET environment variable is required");
+}
 const JWT_EXPIRY = "2h";
 
-// AES-256 Encryption Key
-const AES_SECRET =
-    process.env.SUPERADMIN_AES_SECRET ||
-    "ast3r1ka-a3s-256-3ncrypt10n-k3y-2024";
+// AES-256 Encryption Key — MUST be set in env
+const AES_SECRET = process.env.SUPERADMIN_AES_SECRET;
+if (!AES_SECRET) {
+    throw new Error("SUPERADMIN_AES_SECRET environment variable is required");
+}
 
-// TOTP Secret (for 2FA)
-const TOTP_SECRET =
-    process.env.SUPERADMIN_TOTP_SECRET || "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
+// TOTP Secret (for 2FA) — MUST be set in env
+const TOTP_SECRET = process.env.SUPERADMIN_TOTP_SECRET;
+if (!TOTP_SECRET) {
+    throw new Error("SUPERADMIN_TOTP_SECRET environment variable is required");
+}
 
 // Rate Limiting
 const MAX_LOGIN_ATTEMPTS = 5;
@@ -57,13 +60,12 @@ export async function verifyCredentials(
     password: string
 ): Promise<boolean> {
     if (username !== SUPERADMIN_USERNAME) return false;
-    // Hash the real password on first call and compare
-    const realPasswordHash = await bcryptjs.hash("A$t3r!k@Sup3r#9X", 12);
-    return bcryptjs.compare(password, realPasswordHash);
+    if (!SUPERADMIN_PASSWORD_HASH) return false;
+    return bcryptjs.compare(password, SUPERADMIN_PASSWORD_HASH);
 }
 
 export function generateJWT(payload: object): string {
-    return jwt.sign(payload, JWT_SECRET, {
+    return jwt.sign(payload, JWT_SECRET!, {
         expiresIn: JWT_EXPIRY,
         algorithm: "HS256",
         issuer: "asterika-superadmin",
@@ -73,7 +75,7 @@ export function generateJWT(payload: object): string {
 
 export function verifyJWT(token: string): jwt.JwtPayload | null {
     try {
-        return jwt.verify(token, JWT_SECRET, {
+        return jwt.verify(token, JWT_SECRET!, {
             issuer: "asterika-superadmin",
             audience: "asterika-admin-portal",
         }) as jwt.JwtPayload;
@@ -83,11 +85,11 @@ export function verifyJWT(token: string): jwt.JwtPayload | null {
 }
 
 export function encryptSession(data: string): string {
-    return CryptoJS.AES.encrypt(data, AES_SECRET).toString();
+    return CryptoJS.AES.encrypt(data, AES_SECRET!).toString();
 }
 
 export function decryptSession(ciphertext: string): string {
-    const bytes = CryptoJS.AES.decrypt(ciphertext, AES_SECRET);
+    const bytes = CryptoJS.AES.decrypt(ciphertext, AES_SECRET!);
     return bytes.toString(CryptoJS.enc.Utf8);
 }
 
@@ -150,7 +152,7 @@ export function recordLoginAttempt(ip: string, success: boolean): void {
 }
 
 export function getTOTPSecret(): string {
-    return TOTP_SECRET;
+    return TOTP_SECRET!;
 }
 
-export { SUPERADMIN_USERNAME, JWT_SECRET, AES_SECRET, TOTP_SECRET };
+export { SUPERADMIN_USERNAME };

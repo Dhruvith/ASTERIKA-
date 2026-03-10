@@ -173,49 +173,32 @@ export default function HistoryPage() {
                         </div>
                     </motion.div>
 
-                    {/* Summary Cards */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+                        className="grid grid-cols-1 gap-4"
                     >
-                        <Card className="p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-emerald-500/10 rounded-lg">
-                                    <ArrowDownCircle className="w-5 h-5 text-emerald-400" />
+                        <Card className="p-5 bg-gradient-to-br from-card to-secondary/20 border-primary/20">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className={cn("p-3 rounded-xl shadow-inner", totalTradePnL >= 0 ? "bg-emerald-500/10" : "bg-rose-500/10")}>
+                                        {totalTradePnL >= 0 ? (
+                                            <TrendingUp className="w-6 h-6 text-emerald-500" />
+                                        ) : (
+                                            <TrendingDown className="w-6 h-6 text-rose-500" />
+                                        )}
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Total Trading Net Profit</p>
+                                        <h2 className={cn("text-3xl font-black font-mono tracking-tight mt-0.5", totalTradePnL >= 0 ? "text-emerald-500" : "text-rose-500")}>
+                                            {totalTradePnL >= 0 ? "+" : ""}{formatCurrency(totalTradePnL)}
+                                        </h2>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Deposits</p>
-                                    <p className="text-lg font-bold font-mono text-emerald-400">
-                                        +{formatCurrency(totalDeposits)}
-                                    </p>
-                                </div>
-                            </div>
-                        </Card>
-                        <Card className="p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-rose-500/10 rounded-lg">
-                                    <ArrowUpCircle className="w-5 h-5 text-rose-400" />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Withdrawals</p>
-                                    <p className="text-lg font-bold font-mono text-rose-400">
-                                        -{formatCurrency(totalWithdrawals)}
-                                    </p>
-                                </div>
-                            </div>
-                        </Card>
-                        <Card className="p-4">
-                            <div className="flex items-center gap-3">
-                                <div className={cn("p-2 rounded-lg", totalTradePnL >= 0 ? "bg-emerald-500/10" : "bg-rose-500/10")}>
-                                    <TrendingUp className={cn("w-5 h-5", totalTradePnL >= 0 ? "text-emerald-400" : "text-rose-400")} />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Trade P&L</p>
-                                    <p className={cn("text-lg font-bold font-mono", totalTradePnL >= 0 ? "text-emerald-400" : "text-rose-400")}>
-                                        {totalTradePnL >= 0 ? "+" : ""}{formatCurrency(totalTradePnL)}
-                                    </p>
+                                <div className="hidden sm:block text-right">
+                                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold opacity-50">Performance Overview</p>
+                                    <p className="text-sm font-medium text-foreground/80 mt-1">Based on {historyItems.filter(i => i.type === 'trade').length} trades</p>
                                 </div>
                             </div>
                         </Card>

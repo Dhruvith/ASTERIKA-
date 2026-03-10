@@ -147,10 +147,16 @@ export function StatsCards({ stats, loading }: StatsCardsProps) {
             desc: "Risk to Reward Ratio",
         },
     ];
+    // Filter out zero-value cards for a cleaner UI
+    const visibleCards = cards.filter((card) => {
+        if (card.featured) return true; // Always show featured (Total P&L)
+        if (card.value === "$0.00" || card.value === "0.00") return false;
+        return true;
+    });
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {cards.map((card, i) => {
+            {visibleCards.map((card, i) => {
                 const Icon = card.icon;
                 return (
                     <motion.div

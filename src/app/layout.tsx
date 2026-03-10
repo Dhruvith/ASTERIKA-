@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
@@ -16,7 +17,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AsterikaFX - Trading Journal for Forex & Day Traders",
+  title: "Asterika FX - Trading Journal for Forex & Day Traders",
   description:
     "AsterikaFX is a powerful trading journal designed for forex and day traders to track performance, analyze strategies, and become consistently profitable.",
   keywords: [
@@ -30,19 +31,25 @@ export const metadata: Metadata = {
     "prop firm trading",
     "trading psychology",
     "AsterikaFX",
+    "Asterika FX",
   ],
-  authors: [{ name: "AsterikaFX" }],
+  authors: [{ name: "Asterika FX" }],
+  icons: {
+    icon: "/asterika_logo.png",
+    shortcut: "/asterika_logo.png",
+    apple: "/asterika_logo.png",
+  },
   openGraph: {
-    title: "AsterikaFX - Trading Journal for Forex & Day Traders",
+    title: "Asterika FX - Trading Journal for Forex & Day Traders",
     description:
       "Track your trades, build discipline, and improve performance. A powerful trading journal for serious traders.",
     type: "website",
     locale: "en_US",
-    siteName: "AsterikaFX",
+    siteName: "Asterika FX",
   },
   twitter: {
     card: "summary_large_image",
-    title: "AsterikaFX - Trading Journal",
+    title: "Asterika FX - Trading Journal",
     description:
       "Track your trades, build discipline, and improve performance. Join the growing community of traders.",
   },
@@ -60,6 +67,18 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <head>
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-H2QPR8WVWS"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-H2QPR8WVWS');
+          `}
+        </Script>
         <link rel="icon" href="/favicon.ico" />
         <meta name="theme-color" content="#0b1120" />
       </head>

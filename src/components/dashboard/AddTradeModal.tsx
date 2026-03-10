@@ -45,6 +45,26 @@ const tradeSchema = z.object({
 
 type TradeFormData = z.infer<typeof tradeSchema>;
 
+const commonSymbols = [
+    "XAUUSD",
+    "EURUSD",
+    "GBPUSD",
+    "USDJPY",
+    "USDCHF",
+    "AUDUSD",
+    "NZDUSD",
+    "USDCAD",
+    "GBPJPY",
+    "EURJPY",
+    "EURGBP",
+    "XAGUSD",
+    "US30",
+    "NAS100",
+    "SPX500",
+    "BTCUSD",
+    "ETHUSD",
+];
+
 const strategies = [
     "Breakout",
     "Momentum",
@@ -73,12 +93,17 @@ const marketConditions: { value: MarketCondition; label: string }[] = [
 ];
 
 export function AddTradeModal() {
-    const { isAddModalOpen, closeAddModal } = useTradeStore();
-    const { addTrade } = useTrades();
+    const { isAddModalOpen, closeAddModal, isEditModalOpen, closeEditModal, selectedTrade } = useTradeStore();
+    const { addTrade, updateTrade, trades } = useTrades();
     const { accounts, defaultAccountId } = useAccounts();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedSide, setSelectedSide] = useState<TradeSide>("long");
+    const [customSymbol, setCustomSymbol] = useState("");
+    const [showCustomSymbol, setShowCustomSymbol] = useState(false);
     const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+
+    const isOpen = isAddModalOpen || isEditModalOpen;
+    const isEditing = isEditModalOpen && !!selectedTrade;
 
     const {
         register,
@@ -98,6 +123,46 @@ export function AddTradeModal() {
             notes: "",
         },
     });
+
+    // Reset form when modal opens/changes
+    React.useEffect(() => {
+        if (isOpen) {
+            if (isEditing && selectedTrade) {
+                reset({
+                    symbol: selectedTrade.symbol,
+                    side: selectedTrade.side,
+                    entryPrice: selectedTrade.entryPrice,
+                    exitPrice: selectedTrade.exitPrice,
+                    quantity: selectedTrade.quantity,
+                    entryDate: new Date(selectedTrade.entryDate).toISOString().slice(0, 16),
+                    exitDate: new Date(selectedTrade.exitDate).toISOString().slice(0, 16),
+                    commission: selectedTrade.commission,
+                    strategy: selectedTrade.strategy,
+                    stopLoss: selectedTrade.stopLoss,
+                    takeProfit: selectedTrade.takeProfit,
+                    emotion: selectedTrade.emotion,
+                    marketCondition: selectedTrade.marketCondition,
+                    notes: selectedTrade.notes || "",
+                });
+                setSelectedSide(selectedTrade.side);
+                setSelectedAccountId(selectedTrade.accountId);
+            } else {
+                reset({
+                    side: "long",
+                    commission: 0,
+                    strategy: "Breakout",
+                    emotion: "neutral",
+                    marketCondition: "ranging",
+                    notes: "",
+                    entryDate: new Date().toISOString().slice(0, 16),
+                    exitDate: new Date().toISOString().slice(0, 16),
+                });
+                setSelectedSide("long");
+            }
+        }
+    }, [isOpen, isEditing, selectedTrade, reset]);
+
+    const recentSymbols = Array.from(new Set(trades.slice(0, 20).map(t => t.symbol))).slice(0, 5);
 
     const onSubmit = async (data: TradeFormData) => {
         setIsSubmitting(true);
@@ -120,11 +185,14 @@ export function AddTradeModal() {
                 notes: data.notes,
             };
 
-            await addTrade(tradeInput);
-            reset();
-            closeAddModal();
+            if (isEditing) {
+                await updateTrade(selectedTrade!.id, tradeInput);
+            } else {
+                await addTrade(tradeInput);
+            }
+            handleClose();
         } catch (error) {
-            console.error("Failed to add trade:", error);
+            console.error("Failed to save trade:", error);
         } finally {
             setIsSubmitting(false);
         }
@@ -132,16 +200,17 @@ export function AddTradeModal() {
 
     const handleClose = () => {
         reset();
-        closeAddModal();
+        if (isEditing) closeEditModal();
+        else closeAddModal();
     };
 
     return (
-        <Dialog open={isAddModalOpen} onOpenChange={handleClose}>
+        <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Add New Trade</DialogTitle>
+                    <DialogTitle>{isEditing ? "Edit Trade" : "Add New Trade"}</DialogTitle>
                     <DialogDescription>
-                        Log your trade details for analysis and tracking.
+                        {isEditing ? "Update your trade details." : "Log your trade details for analysis and tracking."}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -155,7 +224,7 @@ export function AddTradeModal() {
                             </label>
                             <Select
                                 value={selectedAccountId || defaultAccountId || accounts[0]?.id}
-                                onValueChange={setSelectedAccountId}
+                                onValueChange={(value: string) => setSelectedAccountId(value)}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select account" />
@@ -213,12 +282,80 @@ export function AddTradeModal() {
                     </div>
 
                     {/* Symbol */}
-                    <Input
-                        {...register("symbol")}
-                        label="Symbol"
-                        placeholder="e.g., AAPL"
-                        error={errors.symbol?.message}
-                    />
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-muted-foreground">
+                            Symbol
+                        </label>
+                        {showCustomSymbol ? (
+                            <div className="flex gap-2">
+                                <Input
+                                    value={customSymbol || watch("symbol")}
+                                    onChange={(e) => {
+                                        const val = e.target.value.toUpperCase();
+                                        setCustomSymbol(val);
+                                        setValue("symbol", val);
+                                    }}
+                                    placeholder="e.g., AAPL"
+                                    error={errors.symbol?.message}
+                                    className="flex-1"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="shrink-0 h-10"
+                                    onClick={() => {
+                                        setShowCustomSymbol(false);
+                                        setCustomSymbol("");
+                                    }}
+                                >
+                                    Back
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                <Select
+                                    value={watch("symbol")}
+                                    onValueChange={(value: string) => {
+                                        if (value === "__custom__") {
+                                            setShowCustomSymbol(true);
+                                        } else {
+                                            setValue("symbol", value);
+                                        }
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select symbol" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {recentSymbols.length > 0 && (
+                                            <>
+                                                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent</div>
+                                                {recentSymbols.map((sym) => (
+                                                    <SelectItem key={`recent-${sym}`} value={sym}>
+                                                        {sym}
+                                                    </SelectItem>
+                                                ))}
+                                                <div className="h-px bg-border my-1" />
+                                            </>
+                                        )}
+                                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">All Assets</div>
+                                        {commonSymbols.map((sym) => (
+                                            <SelectItem key={sym} value={sym}>
+                                                {sym}
+                                            </SelectItem>
+                                        ))}
+                                        <SelectItem value="__custom__">
+                                            ✏️ Enter custom symbol...
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                {errors.symbol && (
+                                    <p className="text-xs text-destructive">{errors.symbol.message}</p>
+                                )}
+                            </div>
+                        )}
+                    </div>
 
                     {/* Prices */}
                     <div className="grid grid-cols-2 gap-4">
@@ -239,6 +376,39 @@ export function AddTradeModal() {
                             error={errors.exitPrice?.message}
                         />
                     </div>
+
+                    {/* Live Profit or Loss Preview */}
+                    {(() => {
+                        const entry = watch("entryPrice");
+                        const exit = watch("exitPrice");
+                        const qty = watch("quantity");
+                        const side = watch("side") || selectedSide;
+                        if (entry > 0 && exit > 0 && qty > 0) {
+                            const pnl = side === "long"
+                                ? (exit - entry) * qty
+                                : (entry - exit) * qty;
+                            const commission = watch("commission") || 0;
+                            const netPnl = pnl - commission;
+                            return (
+                                <div className={cn(
+                                    "flex items-center justify-between px-4 py-3 rounded-lg border",
+                                    netPnl >= 0
+                                        ? "bg-emerald-500/5 border-emerald-500/20"
+                                        : "bg-rose-500/5 border-rose-500/20"
+                                )}>
+                                    <span className="text-sm font-medium text-muted-foreground">Profit or Loss</span>
+                                    <span className={cn(
+                                        "text-lg font-bold font-mono",
+                                        netPnl >= 0 ? "text-emerald-500" : "text-rose-500"
+                                    )}>
+                                        {netPnl >= 0 ? "+" : ""}
+                                        ${netPnl.toFixed(2)}
+                                    </span>
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()}
 
                     {/* Quantity & Commission */}
                     <div className="grid grid-cols-2 gap-4">
@@ -275,20 +445,20 @@ export function AddTradeModal() {
                         />
                     </div>
 
-                    {/* Stop Loss & Take Profit */}
+                    {/* Stop Loss & Take Profit (Optional) */}
                     <div className="grid grid-cols-2 gap-4">
                         <Input
                             {...register("stopLoss", { valueAsNumber: true })}
                             type="number"
                             step="any"
-                            label="Stop Loss"
+                            label="Stop Loss (Optional)"
                             placeholder="0.00"
                         />
                         <Input
                             {...register("takeProfit", { valueAsNumber: true })}
                             type="number"
                             step="any"
-                            label="Take Profit"
+                            label="Take Profit (Optional)"
                             placeholder="0.00"
                         />
                     </div>
@@ -299,8 +469,8 @@ export function AddTradeModal() {
                             Strategy
                         </label>
                         <Select
-                            defaultValue="Breakout"
-                            onValueChange={(value) => setValue("strategy", value)}
+                            value={watch("strategy")}
+                            onValueChange={(value: string) => setValue("strategy", value)}
                         >
                             <SelectTrigger>
                                 <SelectValue placeholder="Select strategy" />
@@ -346,7 +516,7 @@ export function AddTradeModal() {
                         </label>
                         <Select
                             defaultValue="ranging"
-                            onValueChange={(value) => setValue("marketCondition", value as MarketCondition)}
+                            onValueChange={(value: string) => setValue("marketCondition", value as MarketCondition)}
                         >
                             <SelectTrigger>
                                 <SelectValue placeholder="Select condition" />
@@ -382,7 +552,7 @@ export function AddTradeModal() {
                         </Button>
                         <Button type="submit" disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                            {isSubmitting ? "Adding..." : "Add Trade"}
+                            {isSubmitting ? (isEditing ? "Updating..." : "Adding...") : (isEditing ? "Update Trade" : "Add Trade")}
                         </Button>
                     </DialogFooter>
                 </form>

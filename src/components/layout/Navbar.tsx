@@ -46,13 +46,15 @@ export function Navbar() {
                 <div className="h-full container mx-auto px-4 flex items-center justify-between">
                     {/* Logo */}
                     <Link href="/dashboard" className="flex items-center gap-3 shrink-0">
-                        <Image
-                            src="/asterika_logo.png"
-                            alt="AsterikaFX"
-                            width={160}
-                            height={42}
-                            className="h-10 w-auto"
-                        />
+                        <div className="bg-white/5 p-1.5 rounded-xl border border-white/10 shadow-inner">
+                            <Image
+                                src="/asterika_logo.png"
+                                alt="AsterikaFX"
+                                width={180}
+                                height={48}
+                                className="h-12 w-auto object-contain"
+                            />
+                        </div>
                     </Link>
 
                     {/* Nav Links - Desktop */}

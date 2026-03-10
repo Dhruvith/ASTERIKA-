@@ -20,7 +20,7 @@ interface EquityCurveProps {
     startingCapital?: number;
 }
 
-export function EquityCurve({ trades, startingCapital = 10000 }: EquityCurveProps) {
+export function EquityCurve({ trades, startingCapital = 0 }: EquityCurveProps) {
     const data = useMemo<EquityPoint[]>(() => {
         if (trades.length === 0) return [];
 
@@ -66,7 +66,7 @@ export function EquityCurve({ trades, startingCapital = 10000 }: EquityCurveProp
                             Equity Curve
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                            Portfolio value over time
+                            Cumulative Profit & Loss
                         </p>
                     </div>
                 </div>
@@ -95,16 +95,15 @@ export function EquityCurve({ trades, startingCapital = 10000 }: EquityCurveProp
                         Equity Curve
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                        Portfolio value over time
+                        Net Profit & Loss
                     </p>
                 </div>
                 <div className="text-right">
                     <p className={`text-2xl font-bold font-mono ${isPositive ? "text-emerald-500" : "text-rose-500"}`}>
-                        {formatCurrency(data[data.length - 1]?.value || startingCapital)}
-                    </p>
-                    <p className={`text-sm font-medium ${isPositive ? "text-emerald-500" : "text-rose-500"}`}>
-                        {isPositive ? "+" : ""}
                         {formatCurrency((data[data.length - 1]?.value || startingCapital) - startingCapital)}
+                    </p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                        Total Net P&L
                     </p>
                 </div>
             </div>
@@ -141,7 +140,10 @@ export function EquityCurve({ trades, startingCapital = 10000 }: EquityCurveProp
                             axisLine={false}
                             tickLine={false}
                             tick={{ fontSize: 12, fill: "#94a3b8", fontFamily: "JetBrains Mono, monospace" }}
-                            tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                            tickFormatter={(value) => {
+                        if (Math.abs(value) >= 1000) return `$${(value / 1000).toFixed(1)}k`;
+                        return `$${value.toFixed(0)}`;
+                    }}
                             width={60}
                         />
                         <Tooltip
@@ -154,7 +156,7 @@ export function EquityCurve({ trades, startingCapital = 10000 }: EquityCurveProp
                             }}
                             labelStyle={{ color: "#f8fafc", fontWeight: 600, marginBottom: 4 }}
                             itemStyle={{ color: "#f8fafc", fontFamily: "JetBrains Mono, monospace" }}
-                            formatter={(value: number | undefined) => [formatCurrency(value ?? 0), "Portfolio"]}
+                            formatter={(value: number | undefined) => [formatCurrency(value ?? 0), "Profit/Loss"]}
                         />
                         <Area
                             type="monotone"

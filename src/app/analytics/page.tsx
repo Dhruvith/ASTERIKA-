@@ -32,14 +32,6 @@ export default function AnalyticsPage() {
             bg: stats.winRate > 50 ? "bg-emerald-500/10" : "bg-rose-500/10"
         },
         {
-            label: "Risk/Reward",
-            value: formatNumber(stats.avgRiskReward),
-            icon: Target,
-            desc: "Average Risk to Reward Ratio",
-            color: "text-blue-500",
-            bg: "bg-blue-500/10"
-        },
-        {
             label: "Expectancy",
             value: formatCurrency(stats.expectancy),
             icon: Activity,
@@ -81,9 +73,14 @@ export default function AnalyticsPage() {
                         </p>
                     </motion.div>
 
-                    {/* Key Metrics Grid */}
+                    {/* Key Metrics Grid — hide zero/empty values */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                        {metrics.map((metric, i) => {
+                        {metrics.filter((metric) => {
+                            // Hide metrics that are zero/empty for a cleaner look
+                            const rawValue = metric.value;
+                            if (rawValue === "$0.00" || rawValue === "0.00" || rawValue === "0.00%") return false;
+                            return true;
+                        }).map((metric, i) => {
                             const Icon = metric.icon;
                             return (
                                 <motion.div
@@ -125,7 +122,7 @@ export default function AnalyticsPage() {
                             transition={{ delay: 0.3 }}
                             className="lg:col-span-2"
                         >
-                            <EquityCurve trades={trades} startingCapital={10000} />
+                            <EquityCurve trades={trades} />
                         </motion.div>
 
                         {/* Win/Loss Distribution */}

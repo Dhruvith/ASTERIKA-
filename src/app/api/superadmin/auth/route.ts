@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcryptjs from "bcryptjs";
 import { verifySync } from "otplib";
 import {
+    verifyCredentials,
     generateJWT,
     encryptSession,
     checkRateLimit,
@@ -54,13 +54,15 @@ export async function POST(request: NextRequest) {
         const password = sanitize(body.password || "");
         const totpCode = sanitize(body.totpCode || "");
 
-        // Step 1: Validate username
-        if (username !== "superadmin") {
+        // Verify credentials using secure comparison (bcrypt)
+        const isValid = await verifyCredentials(username, password);
+
+        if (!isValid) {
             recordLoginAttempt(ip, false);
             await writeAuditLog({
-                action: "LOGIN_FAILED_INVALID_USERNAME",
+                action: "LOGIN_FAILED_INVALID_CREDENTIALS",
                 category: "auth",
-                details: `Invalid username attempt: ${username.slice(0, 20)}`,
+                details: "Invalid credentials attempt",
                 ip,
                 userAgent,
                 success: false,
@@ -71,32 +73,12 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Step 2: Verify password
-        const storedHash = await bcryptjs.hash("A$t3r!k@Sup3r#9X", 12);
-        const passwordValid = await bcryptjs.compare(password, storedHash);
-
-        if (!passwordValid) {
-            recordLoginAttempt(ip, false);
-            await writeAuditLog({
-                action: "LOGIN_FAILED_INVALID_PASSWORD",
-                category: "auth",
-                details: "Invalid password attempt",
-                ip,
-                userAgent,
-                success: false,
-            });
-            return NextResponse.json(
-                { error: "Invalid credentials", remainingAttempts: rateCheck.remainingAttempts - 1 },
-                { status: 401 }
-            );
-        }
-
-        // Step 3: TOTP verification (2FA)
+        // TOTP verification (2FA)
         if (totpCode) {
             const totpSecret = getTOTPSecret();
-            const isValid = verifySync({ token: totpCode, secret: totpSecret });
+            const isTotpValid = verifySync({ token: totpCode, secret: totpSecret });
 
-            if (!isValid) {
+            if (!isTotpValid) {
                 recordLoginAttempt(ip, false);
                 await writeAuditLog({
                     action: "LOGIN_FAILED_INVALID_TOTP",
@@ -113,7 +95,7 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Step 4: Generate JWT + encrypted session
+        // Generate JWT + encrypted session
         const jwtPayload = {
             sub: "superadmin",
             role: "superadmin",
