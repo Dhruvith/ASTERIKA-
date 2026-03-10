@@ -12,27 +12,23 @@ import jwt from "jsonwebtoken";
 
 const SUPERADMIN_USERNAME = "superadmin";
 
-// Pre-hashed password stored in environment variable
-const SUPERADMIN_PASSWORD_HASH = process.env.SUPERADMIN_PASSWORD_HASH || "";
+// Values (with build-time safety)
+export const SUPERADMIN_PASSWORD_HASH = process.env.SUPERADMIN_PASSWORD_HASH || "";
+export const JWT_SECRET = process.env.SUPERADMIN_JWT_SECRET || "";
+export const AES_SECRET = process.env.SUPERADMIN_AES_SECRET || "";
+export const TOTP_SECRET = process.env.SUPERADMIN_TOTP_SECRET || "";
 
-// JWT Configuration — MUST be set in env
-const JWT_SECRET = process.env.SUPERADMIN_JWT_SECRET;
-if (!JWT_SECRET) {
-    throw new Error("SUPERADMIN_JWT_SECRET environment variable is required");
-}
+// Validation function helper
+const validateConfig = () => {
+    if (!JWT_SECRET || !AES_SECRET || !TOTP_SECRET || !SUPERADMIN_PASSWORD_HASH) {
+        console.error("❌ CRITICAL: SuperAdmin environment variables are missing.");
+        return false;
+    }
+    return true;
+};
+
+// JWT Configuration
 const JWT_EXPIRY = "2h";
-
-// AES-256 Encryption Key — MUST be set in env
-const AES_SECRET = process.env.SUPERADMIN_AES_SECRET;
-if (!AES_SECRET) {
-    throw new Error("SUPERADMIN_AES_SECRET environment variable is required");
-}
-
-// TOTP Secret (for 2FA) — MUST be set in env
-const TOTP_SECRET = process.env.SUPERADMIN_TOTP_SECRET;
-if (!TOTP_SECRET) {
-    throw new Error("SUPERADMIN_TOTP_SECRET environment variable is required");
-}
 
 // Rate Limiting
 const MAX_LOGIN_ATTEMPTS = 5;
@@ -59,13 +55,14 @@ export async function verifyCredentials(
     username: string,
     password: string
 ): Promise<boolean> {
+    if (!validateConfig()) return false;
     if (username !== SUPERADMIN_USERNAME) return false;
-    if (!SUPERADMIN_PASSWORD_HASH) return false;
     return bcryptjs.compare(password, SUPERADMIN_PASSWORD_HASH);
 }
 
 export function generateJWT(payload: object): string {
-    return jwt.sign(payload, JWT_SECRET!, {
+    if (!validateConfig()) throw new Error("Security configuration missing");
+    return jwt.sign(payload, JWT_SECRET, {
         expiresIn: JWT_EXPIRY,
         algorithm: "HS256",
         issuer: "asterika-superadmin",
@@ -74,8 +71,9 @@ export function generateJWT(payload: object): string {
 }
 
 export function verifyJWT(token: string): jwt.JwtPayload | null {
+    if (!validateConfig()) return null;
     try {
-        return jwt.verify(token, JWT_SECRET!, {
+        return jwt.verify(token, JWT_SECRET, {
             issuer: "asterika-superadmin",
             audience: "asterika-admin-portal",
         }) as jwt.JwtPayload;
@@ -85,11 +83,13 @@ export function verifyJWT(token: string): jwt.JwtPayload | null {
 }
 
 export function encryptSession(data: string): string {
-    return CryptoJS.AES.encrypt(data, AES_SECRET!).toString();
+    if (!validateConfig()) throw new Error("Security configuration missing");
+    return CryptoJS.AES.encrypt(data, AES_SECRET).toString();
 }
 
 export function decryptSession(ciphertext: string): string {
-    const bytes = CryptoJS.AES.decrypt(ciphertext, AES_SECRET!);
+    if (!validateConfig()) return "";
+    const bytes = CryptoJS.AES.decrypt(ciphertext, AES_SECRET);
     return bytes.toString(CryptoJS.enc.Utf8);
 }
 
@@ -152,7 +152,8 @@ export function recordLoginAttempt(ip: string, success: boolean): void {
 }
 
 export function getTOTPSecret(): string {
-    return TOTP_SECRET!;
+    if (!validateConfig()) throw new Error("Security configuration missing");
+    return TOTP_SECRET;
 }
 
 export { SUPERADMIN_USERNAME };
