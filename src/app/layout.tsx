@@ -35,9 +35,9 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Asterika FX" }],
   icons: {
-    icon: "/asterika_logo.png",
-    shortcut: "/asterika_logo.png",
-    apple: "/asterika_logo.png",
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
   },
   openGraph: {
     title: "Asterika FX - Trading Journal for Forex & Day Traders",
@@ -79,7 +79,6 @@ export default function RootLayout({
             gtag('config', 'G-H2QPR8WVWS');
           `}
         </Script>
-        <link rel="icon" href="/favicon.ico" />
         <meta name="theme-color" content="#0b1120" />
       </head>
       <body
