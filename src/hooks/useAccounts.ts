@@ -439,7 +439,7 @@ export function useAccounts() {
                 lessonsLearned: input.lessonsLearned || "",
                 mistakes: input.mistakes || "",
                 improvements: input.improvements || "",
-                createdAt: Timestamp.now(),
+                createdAt: input.createdAt ? Timestamp.fromDate(input.createdAt) : Timestamp.now(),
                 updatedAt: Timestamp.now(),
             };
 

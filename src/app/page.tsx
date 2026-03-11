@@ -23,8 +23,13 @@ import {
   Zap,
   Gift,
   Rocket,
+  Newspaper,
+  Clock,
 } from "lucide-react";
-import { Button, BackgroundBeams } from "@/components/ui";
+import { Button, BackgroundBeams, Badge } from "@/components/ui";
+import { useNews } from "@/hooks/useNews";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -40,6 +45,9 @@ const stagger = {
 };
 
 export default function LandingPage() {
+  const { news, loading } = useNews(true);
+  const latestNews = news.slice(0, 3);
+  
   return (
     <div className="dark min-h-screen bg-background font-sans flex flex-col relative overflow-hidden text-foreground">
       <BackgroundBeams />
@@ -48,19 +56,22 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <Image
-              src="/asterika_logo.png"
-              alt="AsterikaFX Logo"
-              width={180}
-              height={48}
-              className="h-12 w-auto"
-              priority
-            />
+            <div className="bg-primary/5 border border-primary/20 p-2 rounded-xl backdrop-blur-sm group hover:border-primary/40 transition-all duration-300">
+              <Image
+                src="/asterika_logo.png"
+                alt="AsterikaFX Logo"
+                width={160}
+                height={42}
+                className="h-10 w-auto group-hover:scale-105 transition-transform duration-300"
+                priority
+              />
+            </div>
           </Link>
           <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-muted-foreground">
             <Link href="#features" className="hover:text-primary transition-colors duration-300">Features</Link>
             <Link href="#why" className="hover:text-primary transition-colors duration-300">Why AsterikaFX</Link>
             <Link href="#who" className="hover:text-primary transition-colors duration-300">Who It&apos;s For</Link>
+            <Link href="/updates" className="hover:text-primary transition-colors duration-300">Updates</Link>
             <Link href="#beta" className="hover:text-primary transition-colors duration-300">Early Access</Link>
           </nav>
           <div className="flex items-center gap-3">
@@ -443,6 +454,90 @@ export default function LandingPage() {
             Whether you are just starting or already trading funded accounts,
             AsterikaFX helps you track and improve your trading performance.
           </motion.p>
+        </div>
+      </section>
+
+      {/* ==================== SECTION: LATEST NEWS ==================== */}
+      <section id="news" className="py-28 bg-background relative z-10">
+        <div className="container mx-auto px-4">
+          <motion.div {...fadeInUp} className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center rounded-full bg-amber-500/10 border border-amber-500/20 px-4 py-1.5 text-sm font-semibold text-amber-500 mb-6">
+                <Newspaper className="w-4 h-4 mr-2" />
+                Latest Updates
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-muted-foreground">
+                News, Insights & Updates
+              </h2>
+            </div>
+            <Link href="/updates">
+              <Button variant="ghost" className="text-primary hover:bg-primary/10 font-bold group">
+                View All Updates 
+                <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+          </motion.div>
+
+          {loading ? (
+            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-96 rounded-2xl bg-card/60 animate-pulse border border-border" />
+              ))}
+            </div>
+          ) : latestNews.length === 0 ? (
+            <div className="text-center py-20 bg-card/10 rounded-3xl border border-dashed border-border max-w-4xl mx-auto">
+              <Newspaper className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-muted-foreground">No updates yet</h3>
+              <p className="text-muted-foreground/60 text-sm mt-2">Checking back soon for the latest Asterika news</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {latestNews.map((item, i) => (
+                <motion.div
+                  key={item.id}
+                  {...stagger}
+                  transition={{ duration: 0.5, delay: 0.2 + i * 0.1 }}
+                  className="group flex flex-col bg-card/40 border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/5"
+                >
+                  <div className="aspect-video relative overflow-hidden">
+                    {item.coverImage ? (
+                      <img src={item.coverImage} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-primary/10 to-transparent flex items-center justify-center">
+                        <Zap className="w-12 h-12 text-primary/30" />
+                      </div>
+                    )}
+                    <div className="absolute top-4 left-4">
+                      <Badge className={cn(
+                        "uppercase text-[10px] font-black tracking-widest border-0",
+                        item.category === 'update' ? "bg-emerald-500 text-white" :
+                        item.category === 'news' ? "bg-blue-500 text-white" :
+                        item.category === 'blog' ? "bg-amber-500 text-white" : "bg-rose-500 text-white"
+                      )}>
+                        {item.category}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="p-6 flex-1 flex flex-col">
+                    <div className="text-xs text-muted-foreground mb-3 font-medium flex items-center gap-2">
+                       <Clock className="w-3 h-3" />
+                       {formatDate(item.createdAt)}
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-3 group-hover:text-primary transition-colors line-clamp-2 leading-tight">
+                      {item.title}
+                    </h3>
+                    <p className="text-muted-foreground text-sm line-clamp-3 mb-6 flex-1">
+                      {item.body}
+                    </p>
+                    <Link href={`/updates/${item.id}`} className="inline-flex items-center text-primary text-sm font-bold group/link">
+                      Read More 
+                      <ArrowRight className="w-4 h-4 ml-2 group-link-hover:translate-x-1 transition-transform" />
+                    </Link>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

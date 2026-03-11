@@ -69,6 +69,8 @@ export default function JournalPage() {
         lessonsLearned: "",
         mistakes: "",
         improvements: "",
+        createdAt: new Date().toISOString().slice(0, 16),
+        tradeId: "",
     });
 
     const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
@@ -86,6 +88,8 @@ export default function JournalPage() {
                 lessonsLearned: form.lessonsLearned,
                 mistakes: form.mistakes,
                 improvements: form.improvements,
+                createdAt: new Date(form.createdAt),
+                tradeId: form.tradeId || undefined,
             });
             setForm({
                 accountId: "",
@@ -96,6 +100,8 @@ export default function JournalPage() {
                 lessonsLearned: "",
                 mistakes: "",
                 improvements: "",
+                createdAt: new Date().toISOString().slice(0, 16),
+                tradeId: "",
             });
             closeAddJournalModal();
         } catch (err) {
@@ -270,65 +276,13 @@ export default function JournalPage() {
                             <DialogDescription>Reflect on your trading day</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4">
-                            <Input
-                                label="Title"
-                                placeholder="e.g., Trading day review - NQ scalping"
-                                value={form.title}
-                                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                            />
-
-                            {/* Link to Recent Trade */}
-                            {trades.length > 0 && (
-                                <div className="space-y-3 p-4 bg-primary/5 rounded-xl border border-primary/10">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-sm font-bold text-primary flex items-center gap-2">
-                                            <Link2 className="w-4 h-4" />
-                                            Log a Recent Trade
-                                        </label>
-                                        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest bg-primary/10 text-primary border-primary/20">Recommended</Badge>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">Select a recent trade to automatically populate the journal entry title and account.</p>
-                                    <Select
-                                        onValueChange={(tradeId: string) => {
-                                            const trade = trades.find((t) => t.id === tradeId);
-                                            if (trade) {
-                                                const pnlStr = trade.pnl >= 0 ? `+${formatCurrency(trade.pnl)}` : formatCurrency(trade.pnl);
-                                                setForm({
-                                                    ...form,
-                                                    title: `${trade.side.toUpperCase()} ${trade.symbol} — ${pnlStr} (${formatDate(trade.exitDate)})`,
-                                                    accountId: trade.accountId,
-                                                });
-                                            }
-                                        }}
-                                    >
-                                        <SelectTrigger className="bg-background">
-                                            <SelectValue placeholder="Choose a trade to review..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {trades.slice(0, 20).map((trade) => (
-                                                <SelectItem key={trade.id} value={trade.id}>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-bold">{trade.symbol}</span>
-                                                        <span className={cn(
-                                                            "text-[10px] px-1.5 py-0.5 rounded uppercase font-bold",
-                                                            trade.side === "long" ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
-                                                        )}>{trade.side}</span>
-                                                        <span className={cn(
-                                                            "font-mono font-bold",
-                                                            trade.pnl >= 0 ? "text-emerald-400" : "text-rose-400"
-                                                        )}>
-                                                            {trade.pnl >= 0 ? "+" : ""}{formatCurrency(trade.pnl)}
-                                                        </span>
-                                                        <span className="text-muted-foreground text-[10px]">{formatDate(trade.exitDate)}</span>
-                                                    </div>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
-
-                            {accounts.length > 0 && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <Input
+                                    label="Date and Time"
+                                    type="datetime-local"
+                                    value={form.createdAt}
+                                    onChange={(e) => setForm({ ...form, createdAt: e.target.value })}
+                                />
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-muted-foreground">Account</label>
                                     <Select
@@ -347,7 +301,70 @@ export default function JournalPage() {
                                         </SelectContent>
                                     </Select>
                                 </div>
+                            </div>
+
+                            {/* Link to Recent Trade - PROMINENT */}
+                            {trades.length > 0 && (
+                                <div className="space-y-3 p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10 shadow-inner">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-sm font-bold text-emerald-400 flex items-center gap-2">
+                                            <Link2 className="w-4 h-4" />
+                                            Select Recent Trade (Optional)
+                                        </label>
+                                        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Recommended</Badge>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">Log your thoughts immediately after a trade to capture your exact mindset.</p>
+                                    <Select
+                                        value={form.tradeId}
+                                        onValueChange={(tradeId: string) => {
+                                            const trade = trades.find((t) => t.id === tradeId);
+                                            if (trade) {
+                                                const pnlStr = trade.pnl >= 0 ? `+${formatCurrency(trade.pnl)}` : formatCurrency(trade.pnl);
+                                                setForm({
+                                                    ...form,
+                                                    tradeId: tradeId,
+                                                    title: `${trade.side.toUpperCase()} ${trade.symbol} — ${pnlStr} (${formatDate(trade.exitDate)})`,
+                                                    accountId: trade.accountId,
+                                                    createdAt: new Date(trade.exitDate).toISOString().slice(0, 16),
+                                                });
+                                            }
+                                        }}
+                                    >
+                                        <SelectTrigger className="bg-background border-emerald-500/20">
+                                            <SelectValue placeholder="Journal a specific trade..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {trades.slice(0, 20).map((trade) => (
+                                                <SelectItem key={trade.id} value={trade.id}>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="font-bold w-12">{trade.symbol}</span>
+                                                        <span className={cn(
+                                                            "text-[10px] px-1.5 py-0.5 rounded uppercase font-black tracking-tight",
+                                                            trade.side === "long" ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
+                                                        )}>{trade.side}</span>
+                                                        <span className={cn(
+                                                            "font-mono font-bold",
+                                                            trade.pnl >= 0 ? "text-emerald-400" : "text-rose-400"
+                                                        )}>
+                                                            {trade.pnl >= 0 ? "+" : ""}{formatCurrency(trade.pnl)}
+                                                        </span>
+                                                        <span className="text-muted-foreground text-[10px] ml-auto">{formatDate(trade.exitDate)}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             )}
+
+                            <Input
+                                label="Title"
+                                placeholder="e.g., Trading day review - NQ scalping"
+                                value={form.title}
+                                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                            />
+
+
 
                             {/* Mood */}
                             <div className="space-y-2">

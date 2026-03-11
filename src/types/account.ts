@@ -88,6 +88,7 @@ export interface JournalEntryInput {
     lessonsLearned?: string;
     mistakes?: string;
     improvements?: string;
+    createdAt?: Date;
 }
 
 export interface TradeRule {

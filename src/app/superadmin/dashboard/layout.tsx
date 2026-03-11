@@ -22,6 +22,7 @@ import { useSuperAdminStore } from "@/store/useSuperAdminStore";
 const NAV_ITEMS = [
     { href: "/superadmin/dashboard", label: "Analytics", icon: BarChart3, color: "text-blue-400" },
     { href: "/superadmin/dashboard/users", label: "Users", icon: Users, color: "text-emerald-400" },
+    { href: "/superadmin/dashboard/news", label: "News & Updates", icon: Bell, color: "text-amber-400" },
     { href: "/superadmin/dashboard/settings", label: "Settings", icon: Settings, color: "text-purple-400" },
     { href: "/superadmin/dashboard/logs", label: "Audit Logs", icon: ScrollText, color: "text-rose-400" },
 ];
